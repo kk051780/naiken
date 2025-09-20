@@ -3,306 +3,209 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>内見ステージング（修正版）</title>
+<title>内見ステージング（安定版 v3）</title>
 <style>
-  :root{
-    --bg:#0e1726;
-    --panel:#162135;
-    --accent:#4cc9f0;
-    --text:#e6edf3;
-    --muted:#9fb3c8;
-  }
-  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue","Noto Sans Japanese","Hiragino Sans","Yu Gothic",sans-serif}
+  :root{--bg:#0e1726;--panel:#162135;--accent:#4cc9f0;--text:#e6edf3;--muted:#9fb3c8}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Noto Sans JP,Hiragino Sans,Yu Gothic,sans-serif}
   h1{font-size:18px;margin:12px 16px}
-  .toolbar{
-    position:sticky;top:0;z-index:5;
-    display:flex;flex-wrap:wrap;gap:8px;
-    padding:10px 12px;background:linear-gradient(0deg,rgba(14,23,38,0.6),rgba(14,23,38,1));
-    backdrop-filter: blur(6px);
-    border-bottom:1px solid rgba(255,255,255,.06);
-  }
-  button,input,select{background:var(--panel);color:var(--text);border:1px solid rgba(255,255,255,.1);padding:10px 12px;border-radius:10px;font-size:14px}
-  button:active{transform:scale(.98)}
+  .toolbar{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;background:linear-gradient(0deg,rgba(14,23,38,.6),rgba(14,23,38,1));backdrop-filter:blur(6px);border-bottom:1px solid rgba(255,255,255,.06)}
+  button,input{background:var(--panel);color:var(--text);border:1px solid rgba(255,255,255,.1);padding:10px 12px;border-radius:10px;font-size:14px}
   button.primary{background:var(--accent);color:#04151a;border-color:transparent}
   label{font-size:12px;color:var(--muted)}
-  .row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .stage-wrap{
-    position:relative;margin:12px auto;max-width:960px;
-    border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08);
-    background:#000;
-  }
-  #stage{width:100%;display:block}
-  #overlay{
-    position:absolute;left:0;top:0;right:0;bottom:0;
-    touch-action:none; /* allow custom pan/drag */
-  }
-  .info{
-    max-width:960px;margin:8px auto;padding:8px 12px;color:var(--muted);font-size:12px
-  }
-  .pill{display:inline-block;background:rgba(76,201,240,.15);border:1px solid rgba(76,201,240,.3);color:#cbefff;padding:2px 8px;border-radius:999px;margin-right:6px}
+  .stage-wrap{position:relative;margin:12px auto;max-width:960px;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,.08);background:#000;min-height:46vh}
+  #stage{width:100%;display:none} /* 初期は非表示（壊れたアイコン防止） */
+  #overlay{position:absolute;left:0;top:0;right:0;bottom:0;touch-action:none}
+  #video{display:none;width:100%}
+  .info{max-width:960px;margin:8px auto;padding:8px 12px;color:var(--muted);font-size:12px}
+  .pill{display:inline-block;background:rgba(76,201,240,.15);border:1px solid rgba(76,201,240,.3);color:#cbefff;padding:2px 8px;border-radius:999px;margin-left:6px}
 </style>
 </head>
 <body>
-  <h1>内見ステージング（オーバーレイ修正版）</h1>
+<h1>内見ステージング（オーバーレイ安定版 v3）</h1>
 
-  <div class="toolbar">
-    <div class="row">
-      <button id="btnCam" title="カメラから撮影">カメラ起動</button>
-      <button id="btnSnap" title="スナップショットを撮る">撮影</button>
-      <input id="filePick" type="file" accept="image/*" style="display:none">
-      <button id="btnPick">写真を選ぶ</button>
-    </div>
-    <div class="row">
-      <button id="btnAuto" class="primary">自動配置</button>
-      <button id="btnReset">家具リセット</button>
-      <button id="btnBase">基準2点</button>
-      <label>基準長さ(m): <input id="refLen" type="number" step="0.01" value="2.0" style="width:90px"></label>
-      <span class="pill" id="scaleLabel">スケール未設定</span>
-    </div>
-  </div>
+<div class="toolbar">
+  <button id="btnCam">カメラ起動</button>
+  <button id="btnSnap">撮影</button>
+  <input id="filePick" type="file" accept="image/*" style="display:none">
+  <button id="btnPick">写真を選ぶ</button>
+  <button id="btnAuto" class="primary">自動配置</button>
+  <button id="btnReset">家具リセット</button>
+  <button id="btnBase">基準2点</button>
+  <label>基準長さ(m): <input id="refLen" type="number" step="0.01" value="2.0" style="width:90px"></label>
+  <span id="scaleLabel" class="pill">スケール未設定</span>
+</div>
 
-  <div class="stage-wrap" id="wrap">
-    <img id="stage" alt="preview">
-    <canvas id="overlay"></canvas>
-    <video id="video" playsinline style="display:none;width:100%"></video>
-  </div>
+<div id="wrap" class="stage-wrap">
+  <img id="stage" alt="preview">
+  <canvas id="overlay"></canvas>
+  <video id="video" playsinline></video>
+</div>
 
-  <div class="info" id="msg"></div>
+<div id="msg" class="info"></div>
 
 <script>
-const $ = sel => document.querySelector(sel);
+const $ = s=>document.querySelector(s);
 const stage = $("#stage");
 const overlay = $("#overlay");
 const ctx = overlay.getContext("2d");
+const video = $("#video");
 const wrap = $("#wrap");
 const msg = $("#msg");
 const scaleLabel = $("#scaleLabel");
 
-let items = []; // 家具矩形
-let mode = "drag"; // 'drag' or 'baseline'
-let dragging = null;
-let dragOff = {x:0,y:0};
-let scaleMPerPx = null; // m/px
-let baselinePts = []; // [{x,y},{x,y}]
+let mode = "drag";
+let items = [];
+let dragging=null, dragOff={x:0,y:0};
+let scaleMPerPx=null;
+let baselinePts=[];
 
-function log(t){ msg.textContent = t; }
+function log(t){ msg.textContent=t; }
 
-/* ===== レイアウト調整 ===== */
+/* ====== サイズ同期（DPR対応） ====== */
 function fitCanvas(){
-  // overlay を stage のCSSサイズに合わせ、DPR対応
   const rect = wrap.getBoundingClientRect();
-  const dpr = window.devicePixelRatio || 1;
-  overlay.style.width = rect.width + "px";
-  overlay.style.height = rect.height + "px";
-  overlay.width = Math.round(rect.width * dpr);
-  overlay.height = Math.round(rect.height * dpr);
+  const dpr = window.devicePixelRatio||1;
+  overlay.style.width = rect.width+"px";
+  overlay.style.height = rect.height+"px";
+  overlay.width = Math.round(rect.width*dpr);
+  overlay.height = Math.round(rect.height*dpr);
   ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawPlaceholder();
   redraw();
 }
 window.addEventListener("resize", fitCanvas);
 
-/* ===== 画像/カメラ ===== */
-async function startCamera(){
-  try{
-    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:false});
-    const video = $("#video");
-    video.srcObject = stream;
-    video.style.display = "block";
-    stage.style.display = "none";
-    await video.play();
-    fitCanvas();
-    log("カメラ起動。『撮影』で静止画に切替。");
-  }catch(e){
-    alert("カメラ起動に失敗: " + e.message);
-  }
-}
-function snapShot(){
-  const video = $("#video");
-  if(!video.srcObject){ alert("カメラ未起動"); return; }
-  // 動画のフレームを画像に
-  const c = document.createElement("canvas");
-  c.width = video.videoWidth; c.height = video.videoHeight;
-  c.getContext("2d").drawImage(video,0,0);
-  stage.src = c.toDataURL("image/jpeg",0.92);
-  stage.style.display = "block";
-  video.style.display = "none";
-  // カメラ停止
-  video.srcObject.getTracks().forEach(t=>t.stop());
-  fitCanvas();
-  log("静止画に切り替えました。");
+/* ====== 初期プレースホルダー ====== */
+function drawPlaceholder(){
+  if(stage.style.display==="block") return;
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  const r = overlay.getBoundingClientRect();
+  ctx.fillStyle="#0b0f19";
+  ctx.fillRect(0,0,r.width,r.height);
+  ctx.fillStyle="rgba(255,255,255,.12)";
+  ctx.fillRect(0,r.height-64,r.width,64);
+  ctx.fillStyle="rgba(255,255,255,.8)";
+  ctx.font="14px system-ui,Segoe UI,Roboto";
+  ctx.fillText("写真を選ぶ か カメラ起動 で画像を読み込んでください。", 14, r.height-38);
 }
 
-$("#btnCam").onclick = startCamera;
-$("#btnSnap").onclick = snapShot;
-
-$("#btnPick").onclick = ()=> $("#filePick").click();
-$("#filePick").onchange = e => {
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = () => {
-    stage.src = reader.result;
-    stage.style.display = "block";
-    $("#video").style.display = "none";
-    items = [];
-    baselinePts = [];
-    scaleMPerPx = null;
-    scaleLabel.textContent = "スケール未設定";
-    setTimeout(fitCanvas, 20);
+/* ====== 画像/カメラ ====== */
+$("#btnPick").onclick=()=>$("#filePick").click();
+$("#filePick").onchange=e=>{
+  const f=e.target.files[0];
+  if(!f) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    stage.src=reader.result;
+    stage.style.display="block"; video.style.display="none";
+    stopCam();
+    items=[]; baselinePts=[]; scaleMPerPx=null; scaleLabel.textContent="スケール未設定";
+    setTimeout(fitCanvas,20);
   };
-  reader.readAsDataURL(file);
+  reader.readAsDataURL(f);
 };
 
-/* ===== 家具データと描画 ===== */
-function redraw(){
-  // 背景は <img> に任せ、ここは家具と基準線だけ描く
-  ctx.clearRect(0,0,overlay.width, overlay.height);
-  // 家具
-  for(const it of items){
-    drawItem(it);
-  }
-  // 基準線
-  if(baselinePts.length>0){
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = "#ffcc00";
-    ctx.fillStyle = "#ffcc00";
-    ctx.beginPath();
-    ctx.arc(baselinePts[0].x, baselinePts[0].y, 5, 0, Math.PI*2);
-    ctx.fill();
-    if(baselinePts.length>1){
-      ctx.beginPath();
-      ctx.moveTo(baselinePts[0].x, baselinePts[0].y);
-      ctx.lineTo(baselinePts[1].x, baselinePts[1].y);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(baselinePts[1].x, baselinePts[1].y, 5, 0, Math.PI*2);
-      ctx.fill();
-    }
-  }
+async function startCam(){
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"},audio:false});
+    video.srcObject=stream; video.style.display="block"; stage.style.display="none";
+    await video.play(); fitCanvas(); log("カメラ起動。『撮影』で静止画化。");
+  }catch(e){ alert("カメラ起動に失敗: "+e.message); }
 }
+function stopCam(){ if(video.srcObject){ video.srcObject.getTracks().forEach(t=>t.stop()); video.srcObject=null; } }
+function snapshot(){
+  if(!video.srcObject){ alert("カメラ未起動"); return; }
+  const c=document.createElement("canvas");
+  c.width=video.videoWidth; c.height=video.videoHeight;
+  c.getContext("2d").drawImage(video,0,0);
+  stage.src=c.toDataURL("image/jpeg",0.92);
+  stage.style.display="block"; video.style.display="none";
+  stopCam(); fitCanvas(); log("静止画に切替。");
+}
+$("#btnCam").onclick=startCam;
+$("#btnSnap").onclick=snapshot;
 
+/* ====== 家具 ====== */
+function redraw(){
+  if(stage.style.display!=="block" && !video.srcObject){ drawPlaceholder(); }
+  // 背景はimg/videoに任せ、ここは家具と基準線のみ
+  ctx.clearRect(0,0,overlay.width,overlay.height);
+  for(const it of items) drawItem(it);
+  drawBaseline();
+}
 function drawItem(it){
   ctx.save();
-  ctx.fillStyle = it.color;
-  ctx.globalAlpha = .85;
-  ctx.fillRect(it.x, it.y, it.w, it.h);
-  ctx.globalAlpha = 1;
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = "rgba(255,255,255,.8)";
-  ctx.strokeRect(it.x, it.y, it.w, it.h);
-  ctx.fillStyle = "#fff";
-  ctx.font = "14px system-ui, -apple-system, Segoe UI, Roboto";
-  ctx.fillText(it.label, it.x+8, it.y+18);
+  ctx.fillStyle=it.color; ctx.globalAlpha=.85;
+  ctx.fillRect(it.x,it.y,it.w,it.h);
+  ctx.globalAlpha=1; ctx.lineWidth=2; ctx.strokeStyle="rgba(255,255,255,.8)";
+  ctx.strokeRect(it.x,it.y,it.w,it.h);
+  ctx.fillStyle="#fff"; ctx.font="14px system-ui"; ctx.fillText(it.label,it.x+8,it.y+18);
   ctx.restore();
 }
-
-function clampRect(r){
-  // 画像領域 = overlayのCSSサイズに一致。0..overlay.width/dpr ではなく CSS単位の幅高
-  const rect = overlay.getBoundingClientRect();
-  const W = rect.width, H = rect.height;
-  // オブジェクト右下がはみ出ないよう調整
-  r.x = Math.max(0, Math.min(r.x, W - r.w));
-  r.y = Math.max(0, Math.min(r.y, H - r.h));
-}
-
-/* ===== 自動配置（はみ出し防止） ===== */
-$("#btnAuto").onclick = ()=>{
-  if(!stage.src){ alert("まず写真を読み込んでください"); return; }
-  const rect = overlay.getBoundingClientRect();
-  const W = rect.width, H = rect.height;
-  const m = 20; // 余白
-  const palette = ["#4376d1","#8d5b2d","#2f7a3f","#9b3a7a","#2e8f9e"];
-  function make(label, fw, fh, x, y, ci){
-    const it = {label, w:fw, h:fh, x, y, color:palette[ci%palette.length]};
-    clampRect(it);
-    return it;
+function drawBaseline(){
+  if(baselinePts.length===0) return;
+  ctx.lineWidth=2; ctx.strokeStyle="#ffcc00"; ctx.fillStyle="#ffcc00";
+  ctx.beginPath(); ctx.arc(baselinePts[0].x,baselinePts[0].y,5,0,Math.PI*2); ctx.fill();
+  if(baselinePts.length>1){
+    ctx.beginPath(); ctx.moveTo(baselinePts[0].x,baselinePts[0].y); ctx.lineTo(baselinePts[1].x,baselinePts[1].y); ctx.stroke();
+    ctx.beginPath(); ctx.arc(baselinePts[1].x,baselinePts[1].y,5,0,Math.PI*2); ctx.fill();
   }
-  // 画像サイズに応じた相対配置（中央〜下部に収まる）
-  const fw = Math.max(120, W*0.28);
-  const fh = Math.max(90,  H*0.18);
-  items = [
-    make("ソファ", fw, fh, m, H - fh - m, 0),
-    make("テーブル", fw*0.7, fh*0.7, W/2 - (fw*0.35), H - fh*0.8 - m, 1),
-    make("観葉", fw*0.5, fh*0.9, W - fw*0.5 - m, H - fh*0.9 - m, 2),
-  ];
-  redraw();
-  log("スタイルに合わせて自動配置しました（はみ出し防止・クランプ済み）。");
+}
+function clampRect(r){
+  const rect=overlay.getBoundingClientRect();
+  const W=rect.width, H=rect.height;
+  r.x=Math.max(0,Math.min(r.x,W-r.w));
+  r.y=Math.max(0,Math.min(r.y,H-r.h));
+}
+$("#btnAuto").onclick=()=>{
+  const rect=overlay.getBoundingClientRect();
+  const W=rect.width, H=rect.height, m=20;
+  const palette=["#4376d1","#8d5b2d","#2f7a3f"];
+  function mk(label,w,h,x,y,i){const it={label,w,h,x,y,color:palette[i%palette.length]}; clampRect(it); return it;}
+  const fw=Math.max(120,W*0.28), fh=Math.max(90,H*0.18);
+  items=[ mk("ソファ",fw,fh,m,H-fh-m,0), mk("テーブル",fw*0.7,fh*0.7,W/2-fw*0.35,H-fh*.8-m,1), mk("観葉",fw*0.5,fh*0.9,W-fw*0.5-m,H-fh*0.9-m,2) ];
+  redraw(); log("自動配置（はみ出し防止）完了");
 };
 
-/* ===== 家具ドラッグ ===== */
-overlay.addEventListener("pointerdown", (ev)=>{
-  const p = eventPoint(ev);
-  if(mode === "baseline"){
-    baselinePts.push(p);
-    if(baselinePts.length>2) baselinePts.shift();
+/* ====== ドラッグ ====== */
+overlay.addEventListener("pointerdown",ev=>{
+  const p=point(ev);
+  if(mode==="baseline"){
+    baselinePts.push(p); if(baselinePts.length>2) baselinePts.shift();
     redraw();
-    if(baselinePts.length===2 && scaleMPerPx){
-      const d = dist(baselinePts[0], baselinePts[1]);
-      const m = d * scaleMPerPx;
-      log(`基準線：${d.toFixed(1)}px ≒ ${m.toFixed(2)}m`);
-    }
     return;
   }
-  // drag hit test
   for(let i=items.length-1;i>=0;i--){
-    const it = items[i];
-    if(p.x>=it.x && p.x<=it.x+it.w && p.y>=it.y && p.y<=it.y+it.h){
-      dragging = it;
-      dragOff.x = p.x - it.x;
-      dragOff.y = p.y - it.y;
-      overlay.setPointerCapture(ev.pointerId);
-      break;
+    const it=items[i];
+    if(p.x>=it.x&&p.x<=it.x+it.w&&p.y>=it.y&&p.y<=it.y+it.h){
+      dragging=it; dragOff.x=p.x-it.x; dragOff.y=p.y-it.y; overlay.setPointerCapture(ev.pointerId); break;
     }
   }
 });
-overlay.addEventListener("pointermove", (ev)=>{
-  if(!dragging || mode!=="drag") return;
-  const p = eventPoint(ev);
-  dragging.x = p.x - dragOff.x;
-  dragging.y = p.y - dragOff.y;
-  clampRect(dragging);
-  redraw();
+overlay.addEventListener("pointermove",ev=>{
+  if(!dragging||mode!=="drag") return;
+  const p=point(ev); dragging.x=p.x-dragOff.x; dragging.y=p.y-dragOff.y; clampRect(dragging); redraw();
 });
-overlay.addEventListener("pointerup", (ev)=>{
-  if(dragging){ dragging = null; overlay.releasePointerCapture(ev.pointerId); }
-});
+overlay.addEventListener("pointerup",ev=>{ if(dragging){ dragging=null; overlay.releasePointerCapture(ev.pointerId);} });
 
-function eventPoint(ev){
-  const r = overlay.getBoundingClientRect();
-  return { x: ev.clientX - r.left, y: ev.clientY - r.top };
-}
-function dist(a,b){ const dx=a.x-b.x, dy=a.y-b.y; return Math.hypot(dx,dy); }
+function point(ev){ const r=overlay.getBoundingClientRect(); return {x:ev.clientX-r.left,y:ev.clientY-r.top}; }
 
-/* ===== 基準2点 ===== */
-$("#btnBase").onclick = ()=>{
-  if(mode === "baseline"){
-    // 確定処理
+/* ====== 基準2点 ====== */
+$("#btnBase").onclick=()=>{
+  if(mode==="baseline"){
     if(baselinePts.length===2){
-      const px = dist(baselinePts[0], baselinePts[1]);
-      const ref = parseFloat($("#refLen").value||"0");
-      if(ref>0 && px>0){
-        scaleMPerPx = ref/px;
-        scaleLabel.textContent = `スケール: ${scaleMPerPx.toFixed(4)} m/px`;
-        log(`スケールを設定: ${scaleMPerPx.toFixed(5)} m/px`);
-      }
+      const dx=baselinePts[0].x-baselinePts[1].x, dy=baselinePts[0].y-baselinePts[1].y;
+      const px=Math.hypot(dx,dy), ref=parseFloat($("#refLen").value||"0");
+      if(ref>0&&px>0){ scaleMPerPx=ref/px; scaleLabel.textContent=`スケール: ${scaleMPerPx.toFixed(4)} m/px`; log(`スケール設定 ${scaleMPerPx.toFixed(5)} m/px`); }
     }
-    mode = "drag";
-    $("#btnBase").textContent = "基準2点";
-  }else{
-    baselinePts = [];
-    mode = "baseline";
-    $("#btnBase").textContent = "確定（基準2点）";
-    log("画像上の2点を順にタップしてください → 『確定』でスケール計算");
-  }
+    mode="drag"; $("#btnBase").textContent="基準2点";
+  }else{ baselinePts=[]; mode="baseline"; $("#btnBase").textContent="確定（基準2点）"; log("基準にしたい2点を順にタップ→確定"); }
   redraw();
 };
 
-/* ===== reset ===== */
-$("#btnReset").onclick = ()=>{ items=[]; redraw(); log("家具をクリアしました"); };
-
-/* ===== 画像ロード完了でcanvas合わせ ===== */
-stage.onload = ()=>{ fitCanvas(); };
-// 初期画像（なし）
+/* ====== 初期化 ====== */
+$("#btnReset").onclick=()=>{ items=[]; redraw(); };
+stage.onload=()=>{ stage.style.display="block"; fitCanvas(); };
 fitCanvas();
 </script>
 </body>
