@@ -1,0 +1,197 @@
+
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>不動産 内見・ステージング・計測・騒音・収支・チェック v6.1（単一HTML）</title>
+<style>
+  :root{ --bg:#0b1624; --card:#0f2035; --muted:#98b5d6; --accent:#35b2ff; }
+  html,body{margin:0;background:var(--bg);color:#e8f2ff;font-family:system-ui,-apple-system,Roboto,Segoe UI,sans-serif}
+  header{padding:12px 16px;font-weight:700;}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;padding:0 16px 12px}
+  .tab{background:#0e2238;border:1px solid #20354f;border-radius:10px;padding:10px 14px;cursor:pointer}
+  .tab.active{background:var(--accent);color:#03223e}
+  .wrap{padding:12px 16px}
+  .card{background:var(--card);border:1px solid #20354f;border-radius:12px;padding:12px;margin-bottom:14px}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:8px 0}
+  .btn{background:#143759;border:1px solid #2a4c6b;border-radius:10px;color:#e8f2ff;padding:8px 12px;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#03223e;border-color:#1e9bdc}
+  .field{display:flex;align-items:center;gap:6px;background:#102337;border:1px solid #20354f;border-radius:10px;padding:6px 10px}
+  .small{font-size:.85em;color:var(--muted)}
+  canvas.chart{width:100%;background:#051222;border-radius:10px;border:1px solid #17314d}
+  .previewBox{position:relative;max-width:100%}
+  #stageImg{max-width:100%;display:block;border-radius:10px;border:1px solid #17314d}
+  .sprite{position:absolute;user-select:none;touch-action:none;cursor:move;border:2px solid rgba(255,255,255,.6);border-radius:6px}
+  .badge{position:absolute;top:8px;left:8px;background:rgba(0,0,0,.55);padding:4px 6px;border-radius:6px;font-size:12px}
+  .formGrid{display:grid;grid-template-columns:minmax(160px,1fr) minmax(160px,1fr);gap:10px}
+  @media (min-width:880px){ .formGrid{grid-template-columns: repeat(4, minmax(160px,1fr));}}
+</style>
+</head>
+<body>
+<header>不動産 内見・ステージング・計測・騒音・収支・チェック v6.1（単一HTML）</header>
+
+<div class="tabs">
+  <div class="tab active" data-tab="stage">ステージング</div>
+  <div class="tab" data-tab="noise">騒音</div>
+  <div class="tab" data-tab="land">物件情報/土地値比率</div>
+  <div class="tab" data-tab="dscr">収支/DSCR</div>
+</div>
+
+<div class="wrap">
+
+  <section id="stage" class="card">
+    <div class="row">
+      <button id="camStart" class="btn">カメラ起動</button>
+      <button id="shot" class="btn">撮影</button>
+      <label class="field"><input type="file" id="pickPhoto" accept="image/*" style="display:none"><button id="pickBtn" class="btn">写真を選ぶ</button></label>
+      <button id="autoPlace" class="btn primary">自動配置</button>
+      <button id="clearSprites" class="btn">家具リセット</button>
+      <button id="scaleBtn" class="btn">確定（基準2点）</button>
+      <div class="field"><label>基準長さ(m)</label><input id="baseMeter" type="number" value="2.0" step="0.1" style="width:80px;background:#0a1a2a;color:#fff;border:0"></div>
+      <span id="scaleInfo" class="small">スケール未設定</span>
+    </div>
+    <div class="previewBox">
+      <video id="cam" autoplay playsinline muted style="display:none;max-width:100%;border-radius:10px;border:1px solid #17314d"></video>
+      <img id="stageImg" alt="" />
+      <div id="spriteLayer"></div>
+      <div id="guide" class="badge" style="display:none">基準点を2回タップ</div>
+    </div>
+    <div class="row">
+      <div class="field"><label>スタイル</label>
+        <select id="styleSel">
+          <option value="single-minimal">単身男性/ミニマル</option>
+        </select>
+      </div>
+    </div>
+  </section>
+
+  <section id="noise" class="card" style="display:none">
+    <div class="row">
+      <button id="btnMic" class="btn">マイク計測開始</button>
+      <button id="btnMicStop" class="btn">停止</button>
+      <div class="field"><span id="dbNow">-- dB</span></div>
+      <div class="field"><span id="laeq">LAeq: --</span></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>時間窓(秒)</label>
+        <input id="timeSpan" type="range" min="5" max="120" step="5" value="30">
+        <span id="timeSpanVal">30</span>
+      </div>
+      <div class="field"><label>最小dB</label>
+        <input id="minDb" type="range" min="-120" max="-40" step="2" value="-90">
+        <span id="minDbVal">-90</span>
+      </div>
+      <div class="field"><label>最大dB</label>
+        <input id="maxDb" type="range" min="-40" max="0" step="2" value="-10">
+        <span id="maxDbVal">-10</span>
+      </div>
+      <div class="field"><label>濃淡γ</label>
+        <input id="gamma" type="range" min="0.5" max="3" step="0.1" value="1.2">
+        <span id="gammaVal">1.2</span>
+      </div>
+    </div>
+    <canvas id="dbCanvas" class="chart" width="900" height="160"></canvas>
+    <div style="position:relative; width:100%; max-width:900px; margin-top:8px;">
+      <canvas id="specCanvas" class="chart" width="900" height="240"></canvas>
+      <canvas id="specAxis" width="900" height="240" style="position:absolute;left:0;top:0;pointer-events:none;"></canvas>
+    </div>
+    <div class="row">
+      <button id="scanBtn" class="btn">騒音源スキャン(パン計測)</button>
+      <span class="small">端末を左右にゆっくり振ってください（方位別の音圧ヒートマップ）</span>
+    </div>
+    <canvas id="scanCanvas" class="chart" width="900" height="160"></canvas>
+  </section>
+
+  <section id="land" class="card" style="display:none">
+    <div class="row">
+      <div class="field"><label>物件価格(万円)</label><input id="priceMan" type="number" step="10" placeholder="例:1980" style="width:120px;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>土地面積(m²)</label><input id="landM2" type="number" step="1" placeholder="例:100" style="width:120px;background:#0a1a2a;color:#fff;border:0"></div>
+      <button id="btnGps" class="btn">GPSで住所</button>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>住所/座標</label><input id="addr" placeholder="(lat, lng)推奨" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1"><label>Workers URL</label><input id="wkUrl" placeholder="https://your-worker.workers.dev" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+      <button id="btnFetchLand" class="btn">3点平均を計算</button>
+    </div>
+    <div class="row">
+      <div class="field"><label>路線価(千円/m²)</label><input id="rosenka" type="number" step="1" style="width:120px;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>公示価格(千円/m²)</label><input id="koushi" type="number" step="1" style="width:120px;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>近傍成約(千円/m²)</label><input id="near" type="number" step="1" style="width:120px;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>3点平均(千円/m²)</label><input id="avg3" type="number" step="1" style="width:120px;background:#0a1a2a;color:#fff;border:0"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>推定土地値(万円)</label><input id="landValueMan" style="width:140px;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>土地値比率(%)</label><input id="ratio" style="width:120px;background:#0a1a2a;color:#fff;border:0"></div>
+    </div>
+    <div class="small">* Workers未設定時は入力値で計算。路線価は後日KV接続で自動化。</div>
+  </section>
+
+  <section id="dscr" class="card" style="display:none">
+    <div class="formGrid">
+      <div class="field"><label>月額家賃(円)</label><input id="rent" type="number" step="1000" value="70000" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>稼働率</label><input id="occ" type="number" step="0.01" value="0.95" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>経費率</label><input id="exp" type="number" step="0.01" value="0.25" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>固定費(年,円)</label><input id="fix" type="number" step="10000" value="120000" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>借入額(万円)</label><input id="loanMan" type="number" step="10" value="1500" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>金利</label><input id="rate" type="number" step="0.01" value="0.02" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+      <div class="field"><label>返済年数</label><input id="years" type="number" step="1" value="30" style="flex:1;background:#0a1a2a;color:#fff;border:0"></div>
+    </div>
+    <div class="row">
+      <div class="field"><span id="noi">NOI: -</span></div>
+      <div class="field"><span id="annualPay">年返済: -</span></div>
+      <div class="field"><span id="dscrOut">DSCR: -</span></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+// タブ
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.querySelectorAll('section').forEach(s=>s.style.display='none');document.getElementById(t.dataset.tab).style.display='block';});
+
+// ステージング
+const cam=document.getElementById('cam'),stageImg=document.getElementById('stageImg'),spriteLayer=document.getElementById('spriteLayer');let mediaStream=null,scalePxPerM=null,basePoints=[];
+function createSprite(src,w_m){const img=new Image();img.src=src;img.className='sprite';img.dataset.wm=w_m;img.onload=()=>{const w=scalePxPerM?w_m*scalePxPerM:Math.min(stageImg.clientWidth*0.35,img.width);const r=w/img.width;img.style.width=w+'px';img.style.left=(stageImg.offsetLeft+20+Math.random()*40)+'px';img.style.top=(stageImg.offsetTop+stageImg.clientHeight-img.height*r-20)+'px';spriteLayer.appendChild(img);};let sx,sy,l0,t0;img.addEventListener('pointerdown',e=>{sx=e.clientX;sy=e.clientY;l0=parseFloat(img.style.left)||0;t0=parseFloat(img.style.top)||0;img.setPointerCapture(e.pointerId);});img.addEventListener('pointermove',e=>{if(sx==null)return;img.style.left=(l0+e.clientX-sx)+'px';img.style.top=(t0+e.clientY-sy)+'px';});img.addEventListener('pointerup',e=>{sx=sy=null;});}
+function loadSet(){spriteLayer.innerHTML='';createSprite('data:image/webp;base64,UklGRtIEAABXRUJQVlA4WAoAAAAQAAAABwIAFwEAQUxQSHcAAAABFyAWTPxJZ9CbRkTEAtvItpVcXLL/4fWD5nzrj5g2IXR9Ef2fgOlZmGPjR/Yf+4/9x/67kEqAtmqIyPWEilCprSo7VYKAEpXnvG2ytbKeWCAbbVPVq7JyC6oLtymcqW2zHrlBeZVToK1aS/Yf+4/9x/67FTwKAQBWUDggNAQAAHA4AJ0BKggCGAE+bTaUSKQjIaElkSgQgA2JZ27hdrD+NBkHkwHqA8uboAeIB6OnqA3gD0AOknrgHu7XXtcB3gMTn+AcC75sX9l/XPxd9i/yx7AX6af8j1gPUB+wHsgfsqAZCDfedSkztWpvDWykxlzqUmdq1N4a2UmMudSkztWpvDWykxlznWid3+oFdm1cdZtXHWbVx1m1cbf245BQSU959oitVx1m1cdY/r16SnvPtEVquOs2rjrNq4Ie8wlXHWbVx1m1cdZtXHWaeGQFEVquOs2rjrNq46zauNvVDYvaIrVcdZtXHWbVx1m0Y53RFarjrNq46zauOs2rjqCgqrK3ZtXHTqxwAOhlgg5HAvEeDyhpJMRWq46zaMc7oitVx1m0d5VMqjG7WnWbVx1m0Y53RFarjrNq46zauOs2rjqCgqrK3ZtXHWbVx1m1cdZtV06LJWq46zauOs2rjrNq46x/Xr0lPefaIrVcdZtXHWbVwQ95hKuOs2rjrNq46zauOs08MgKIrVcdZtXHWbVx1m1cbeqGxe0RWq46zauOs2rjrNoxtKxqUsm8NbKTGXOpSZ2rU3hrZSYy51KTO1am8NbKTGXOpSZ2rUcbmAAA/v4vE/D5fJndu/q9giDLZFdah68ro5Ms07fMK/5N/1UtaCh0RfsOK4YRWfmqe8KCkh9GNHdoc0x5ntDmmPM9oc0x5ntDmmPM9oc0x5ntDmmPM9oc0x3qv78uitOEQJNvslfGIsujyNX/BiQn2O9Z1yVHQoJAAAAEJ+w2sVEAG3YA4MAB2PMCAEeXAoAMYKkQAc7yTgBHlyBEJ9rh/B9/Ez3beRTA+VQzzF1MI7KtkIfct4on9+ko0XiZfrzmemEDBBFF/6GjsZ8Xz98sgixW4aEdCDOPFaijlA0ixJI0uL7TFl/tXC15gZMyuh3O6v60bJn8Mimnn3xyvlwN9DdYPfQAHuOz0ERo5w/1aRaO4P93Pc7Xtvsf44iuLN88I1wyXvJA5zDG2ZpoMuP9zL3G3xyETGavKkQChscE3Z6NsQ6f93jbEn/zBtbDYEbcnsvv9UhskEfhOmt1rDq7dqfPC6t/sIqC3LXI3uR4EN76+xfFfX8IuLyPAjOyHa3ydxYg4KOg99b5VriZpHPjhVk6VxIJSNgUzY84JUfRGfV75uQ/uGZBqPRml/pzXxPWmWnndknN78UOT+0Bxa405QPmyoD7Byr5vxtH0tuq7Lf0X7iyi+nvZ2CErTpq4AL2cpgAAB6vMCAEeXAoAMYKkQAc7yTgBHlyBADGCkYAHO8wIAR5nO0iffaddmCRiPq/DDmxPXSNHJifPvZq/uhgRr1K41vveyCORxrfe9kEcjjW+97II5HGt972QRyONb73sgjkca33vZBHI41vveyCORxrffNKtYFbJAFjcCb9okCg7AMEoCpxegAA',1.6);createSprite('data:image/webp;base64,UklGRhYEAABXRUJQVlA4WAoAAAAQAAAAZwEA2wAAQUxQSHQAAAABFyAWTPxJZ9CbRkTEghtHkp1q8CZD2r0PbvN50tv7EXNNyNjo24j+T8D52jgi6OPvv7//Xv8azE0sVM+mWcEGlFjmKVMaAmiA7LEUO5uGzU3jRSyepCEuczEFY0ksyYUSC83c3BV0ocbyyL///v57s3hpBFZQOCB8AwAAMCUAnQEqaAHcAD5tNpdIJCMiISfxqACADYlnbuF2APLRThRbYDmYPUBvIHoAdL5kSpGepR3ddcBmnecD+zamL/kf3jzZfQHsC/rN1FPQa/VUBf6ydwBtAXHaNoC47RtAXHaNoC47RtAXHZ3K2CoxbFw6tYwxE7KTOPgTmmdFw6tYwxE7KFScF2UmdFw6tYwxEw9muzouHVrGGInZSR/skykzouHVrGGInTr6pWsYYOBglFebaeGRqlFIDaVMk8n3zD2a7Oi4ayh4jdUeXeiUeRKzAxiJ2UKk4LspM6Lh40x9ERQ9muzouHVrGGInZSR/skykzouHVrGGInTr6pWsYYidlJnRcOnIA18mdFw6tYwxE7HMIo8X16FThVcgcbKrkDjZVcgcbKrkDjZVce6YOnMAAP7/eP/9eHwtWp+kR8oWDJi649p+N2RMZmljPwqCy7KqiLUOOKfuVkpcRRl+nbCQi/TthIRfp2wkIv07YQ73l6Lr4m1HOzvdSZYUR1KKOGLGIHtXAAe4MoIAtWkQCcthAIYGEAhgYXvp3/9K/6fq+6dnCau0zRkn/X+sYVbM+yf8mb0/vWCO/47aVG6FyGyzkOrhN78GXztlB+nWAQndyn3tcmAixBuVT+siTC5EgrXH9RaomwZoGCvcEv1wmu6JlYqukSErYYokn/y++FQudxRqllQP5Jb8+LrbsTb5R/+8TfKaghmAegbBUwYX+xQLEYTVqROTZuSmQueRWK3BxepTRt++F8vVWrPHx61RbRuxH/xiwd2VrLuKFb1wFXTkLrN8jcN4Ui3h10rmlCu1PzykUJ1L2mjOSlgfXRZJAdUOnwgu0wQr9slIgGg1knGphr8QBG6rhRWFWy9ZIREwKnQBELTKncL2C7aRiLJWnyPHMIw2GslFJTHJ211+ORkfAMNq8D6df+pHdy2HANylMsw/klRp1YK5z0oXwQjBv3P8YZedzla8yk12FMQigtpll3rhuxPElYIwTz5XNJGsZNi/xof0GRbS1aMTQGY7qjJH5s2cmKmCIAKG2EARQMIBDAwgEMDCAQwMIBC5ydSebjeGel8qGFv33FYK+27DcU64A517Y+8Q/ANtUjL4WUrHh1AAR7sZkiPdjMkR7sZkiPdjMkR7sZkiPdjMkR7sZkiPdjMkR7siXxuTThyHMF+UwRRaBSaQCPAAAA==',1.2);createSprite('data:image/webp;base64,UklGRkwEAABXRUJQVlA4WAoAAAAQAAAAawIAewEAQUxQSHYAAAABFyAWTPxJZ9CbRkTEAtvItpVc5AtkzDz60Zej/RHTJinjciP6PwHLEzrFXp3pP/qP/qP/6D/6j7UwKMz+aFXVoDVoZYeIdgIYtOO0S7AqzBTsDqNdvmol2x+ineyWbCxytJMUZn9sMf1H/9F/9B/9R/+RIA9oVlA4ILADAADQRwCdASpsAnwBPm02mEkkIyKhJHCIAIANiWlu4Xfh/kazX+8+o8nABzu8cBiU/zDUa/7D7pPabqD/px1APQg/W4IcgBlU7RZ9kA2dp4UUWVDGUxT7IBs7TwoosqGMpin2QDZ2nhRRWyhptupZ9x4E7W5u6fCNnoUTwJ13RqYrcaRdkjmsC1wgFVF2yRzWBa4Mm+q2SOawLXCAVUXbJHNYFrhAFBva+qi7ZI5rAtcIBVRdskc1gRb9h2yRzWBa4QCqi7ZI5rAtcH4i/AuEAqou2SOawLXCAVUXbJHFZriDCqi7ZI5rAtcIBVRdskc1TVoQgFrhAKqLtkjmsC1wgFVF2mKBb9Jgwqou2SOawLXCAVUXbIzjNxoRWBa4QCqi7ZI5rAtcIBU/RjhFYFrhAKp+XwCURcB9xhlgAjTg8N3rAtcIBVRdpigfWAhFYFrg++wADN+gAoAy1S0nNYFrhAKqKyeEBzWBa4QCqj+UQHNYFrhAKqADe19VF2yRzWBa4QCqi7ZI5rAi37DtkjmsC1wgFVF2yRzWBa4PxF+BcIBVRdskc1gWuEAqou2SOKzXEGFVF2yRzWBa4QCqi7ZI5qmrQhALXCAVUXbJHNYFrhAKqLtMUC36TBhVRdskc1gWuEAqou2RnGbjQisC1wgFVF2yRzWBa4QCp+jHCKwLXCAVUXbJHNYFrhAKqKyeGkXZI5rAtcIBVRdskc1gWuDJsnryRUNUMZTFPsgGztPCiiyoYymKfZANnaeFFFlQxlMU+yAbO0148bAAAP7ppzinauRVdd3ssgE/bgpOQwEKpaLkFyC5BcguQXILkFyCfc/qKREKiNT8ILDPAGmgAAAAABjxVhdBRhZZPBXpNxXJNyFeYjQt9opdzQgkjb5kmUZ2q8d6Ueur73OwwcfGAZwK+ytrU8f2aF43NXllN3Na/8+9YfTvA/RXJ2x/97Dv/f3//9fn/wgMd5m8f+uZ1shm/M5KiTMTL+ZJ3o6+X3RvSRkkMszxp8UwJZiQdlbvRuvd+pWwQqq1VZXJRAl7WSKfeFcHbIv/jF2OJvBHzOD8YWEsOsRzqCinsyv/EctZZekZFo23kdXKpjIXKBVr5q1mm6MIAWA4Xrv3yHQ6T71NHdODVzOdqHfVj8iAeA3zGG8qwdoX9jN09vMq6t5+tJ/4UVABUwRK8y7fbZtAps9NJEtZq1mm6FQTBNSBhnOBYhgpTBbRPxYhORXJNxXIdX1uORAYhL3/gQgOvaIawQKX2f0AAA==',1.8);createSprite('data:image/webp;base64,UklGRpADAABXRUJQVlA4WAoAAAAQAAAAxwAAPwEAQUxQSGcAAAABFyAWTPxJZ9CbRkTEAtvadpuI4Nj5HGkfB9QT96NmzqyKzhH9n4DjX/UgfK/+qzWJCqKSMTKNzBvBiDCiEFRREYeTuInpKTUnamtEKDUSX2CQATyhtLRtq5oURIVRyfi8+q8+5VcFAFZQOCACAwAA8CEAnQEqyABAAT5tNpdIJCMiISjxmACADYlnbuF2AQrvK8Bt1bs53lfInfDv9AmaOcNxgH+A0g3xAP5nxHvKV/qvJN8wewF/Jf5T/zfVu9QHoN/p4A1wBIekcIqaqrTA0N7q98bs2sG/Ru+LtPht2PrXHUvMb5aw0jOWxvl0E5Knlm+XQdvytdrnDodXi8kXxoVFeY0IEFQv3K2N4wLZx1eY3y1hpGcdUFYNOhAHdRii85KnldLtOm2oBdBJPeTdzUoWnO184QbqfAu/EDEwURtgfl0V4vJF8aFRXmNCBBUL9ytjeMC2cdXmN8tYaRnLY3y6CclTyzfLoO35Wu1zh0OrxeEbneN+fS6GBwipqqtMDQ3qmX8mSAD+51tzB0hb6ONOzpAUk9Z2mJ5M9AQ74uzrWSv2eCLAJ3vtzpbtI29oSX/PGjVF52jRj64QxAB5jl6l2HcNoe+CCxk5MsJvZITBvR0ja0dI2tHSNrXbEFXCIIauk2JEUWuXO/3qG1Hx4lntsu2MPsalntGytYL1zrahg5E3qX6uCGwBT4iKKYDh/pNnexeIFXmkm6qSl0FP6UFs6E/6285q4Plf7CTfx95QXTWMJVgSsf00ytM9EZMZ6/b0PEeHXffplLMyPSij8qrMnd2NReWVODkfT3BroZ7D2GVPmar1z885Nir5H/iPcz7Dv+ij/5Qn4AcBbexLuIpSG1esIWfHFxWV/E7oCye8LVXD7SpPdqSyU+9iJliG7ItnzlOPr5id8dG1Fk3acppAYPiOocQ9SvzE3HccbhAdjF9QCj3S7/tDGWTwHV1Tg2fliTPJfjqaEJL+bKM+cY6l63IqdZifUXn4nEgi4ta9/VekH/isHR6WKYCaHAaeng9uqIh6aP354Qd8AiKC3lcr/Y9X87dN2eaE8+szP8dRY3L2LANzNIpF0ZexpTg0Tao/O8Da3ASotYEqLWBKi1gSotZVt9vTvzn6TpKqTK/q2OkKv+ZJtPeF/lt31ntLacqnGNfBKFk9/cma3orgAAA=',0.6);}
+document.getElementById('styleSel').onchange=loadSet;
+document.getElementById('camStart').onclick=async()=>{try{mediaStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});cam.srcObject=mediaStream;cam.style.display='block';stageImg.style.display='none';}catch(e){alert('カメラ失敗:'+e.message);}};
+document.getElementById('shot').onclick=()=>{if(!mediaStream){alert('先にカメラ起動');return;}const v=cam;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0,c.width,c.height);stageImg.src=c.toDataURL('image/jpeg',0.9);stageImg.style.display='block';cam.style.display='none';loadSet();};
+document.getElementById('pickBtn').onclick=()=>document.getElementById('pickPhoto').click();
+document.getElementById('pickPhoto').onchange=e=>{const f=e.target.files?.[0];if(!f)return;const r=new FileReader();r.onload=()=>{stageImg.src=r.result;stageImg.style.display='block';cam.style.display='none';loadSet();};r.readAsDataURL(f);};
+document.getElementById('clearSprites').onclick=()=>spriteLayer.innerHTML='';
+const guide=document.getElementById('guide');
+document.getElementById('scaleBtn').onclick=()=>{basePoints=[];guide.style.display='block';stageImg.onclick=e=>{const rect=stageImg.getBoundingClientRect();basePoints.push({x:e.clientX-rect.left,y:e.clientY-rect.top});if(basePoints.length===2){guide.style.display='none';stageImg.onclick=null;const dx=basePoints[1].x-basePoints[0].x,dy=basePoints[1].y-basePoints[0].y;const px=Math.hypot(dx,dy);const m=parseFloat(document.getElementById('baseMeter').value)||2;scalePxPerM=px/m;document.getElementById('scaleInfo').textContent=`スケール: ${scalePxPerM.toFixed(1)} px/m`;spriteLayer.querySelectorAll('.sprite').forEach(el=>{const wm=parseFloat(el.dataset.wm||'');if(wm)el.style.width=(wm*scalePxPerM)+'px';});}}};};
+document.getElementById('autoPlace').onclick=()=>{const box=stageImg.getBoundingClientRect();spriteLayer.querySelectorAll('.sprite').forEach((el,i)=>{const w=el.getBoundingClientRect().width,h=el.getBoundingClientRect().height;const x=box.left+20+i*(w+20);const y=box.bottom-h-20;el.style.left=Math.min(box.right-w-10,x)-box.left+'px';el.style.top=Math.min(box.bottom-h-10,y)-box.top+'px';});};
+
+// 騒音
+const dbCanvas=document.getElementById('dbCanvas'),dbCtx=dbCanvas.getContext('2d');const specCanvas=document.getElementById('specCanvas'),spCtx=specCanvas.getContext('2d');const axisCtx=document.getElementById('specAxis').getContext('2d');
+const ui={timeSpan:document.getElementById('timeSpan'),timeSpanVal:document.getElementById('timeSpanVal'),minDb:document.getElementById('minDb'),minDbVal:document.getElementById('minDbVal'),maxDb:document.getElementById('maxDb'),maxDbVal:document.getElementById('maxDbVal'),gamma:document.getElementById('gamma'),gammaVal:document.getElementById('gammaVal')};
+ui.timeSpan.oninput=()=>ui.timeSpanVal.textContent=ui.timeSpan.value;ui.minDb.oninput=()=>ui.minDbVal.textContent=ui.minDb.value;ui.maxDb.oninput=()=>ui.maxDbVal.textContent=ui.maxDb.value;ui.gamma.oninput=()=>ui.gammaVal.textContent=ui.gamma.value;
+let audioCtx,analyser,srcNode,timeBuf,rafId;let ring=[],laeqAcc=0,laeqN=0,secTick=0;
+function drawAxes(){axisCtx.clearRect(0,0,axisCtx.canvas.width,axisCtx.canvas.height);const H=axisCtx.canvas.height,W=axisCtx.canvas.width;axisCtx.font='10px system-ui';axisCtx.fillStyle='rgba(255,255,255,.85)';axisCtx.strokeStyle='rgba(255,255,255,.18)';const fs=audioCtx?.sampleRate||48000;const fftSize=analyser?.fftSize||2048,binCount=fftSize/2;[50,100,200,500,1000,2000,5000,10000,16000].forEach(f=>{let bin=Math.round(f*fftSize/fs);bin=Math.max(0,Math.min(bin,binCount-1));const y=H-Math.round(bin*H/binCount);axisCtx.beginPath();axisCtx.moveTo(0,y);axisCtx.lineTo(W,y);axisCtx.stroke();axisCtx.fillText(f>=1000?(f/1000)+'kHz':f+'Hz',6,Math.max(10,y-2));});axisCtx.fillText('→ 時間（右が最新）',W-120,H-6);}
+function updateDbRange(){if(!analyser)return;analyser.minDecibels=parseFloat(ui.minDb.value);analyser.maxDecibels=parseFloat(ui.maxDb.value);}
+async function startMic(){try{const stream=await navigator.mediaDevices.getUserMedia({audio:true});audioCtx=new (window.AudioContext||window.webkitAudioContext)();srcNode=audioCtx.createMediaStreamSource(stream);analyser=audioCtx.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=0.8;updateDbRange();srcNode.connect(analyser);timeBuf=new Uint8Array(analyser.fftSize);spCtx.fillStyle='#000';spCtx.fillRect(0,0,specCanvas.width,specCanvas.height);drawAxes();lastSpecTime=0;laeqAcc=0;laeqN=0;secTick=0;loop();}catch(e){alert('マイク開始に失敗: '+e.message);}}
+function stopMic(){cancelAnimationFrame(rafId);}
+document.getElementById('btnMic').onclick=startMic;document.getElementById('btnMicStop').onclick=stopMic;ui.minDb.onchange=updateDbRange;ui.maxDb.onchange=updateDbRange;
+function drawLAeq(dbA){const W=dbCanvas.width,H=dbCanvas.height;laeqAcc+=dbA;laeqN+=1;secTick+=1;if(secTick>=60){const secAvg=laeqAcc/laeqN;ring.push(secAvg);while(ring.length>parseInt(ui.timeSpan.value,10))ring.shift();laeqAcc=0;laeqN=0;secTick=0;}const laeq=ring.length?ring.reduce((a,b)=>a+b,0)/ring.length:dbA;document.getElementById('dbNow').textContent=dbA.toFixed(1)+' dB';document.getElementById('laeq').textContent='LAeq: '+laeq.toFixed(1);dbCtx.fillStyle='#06121f';dbCtx.fillRect(0,0,W,H);if(!ring.length)return;dbCtx.strokeStyle='#7fb3ff';dbCtx.beginPath();ring.forEach((v,i)=>{const x=i*(W/(parseInt(ui.timeSpan.value,10)));const y=H-(Math.max(0,Math.min(100,v))/100)*H;i?dbCtx.lineTo(x,y):dbCtx.moveTo(x,y);});dbCtx.stroke();}
+let lastSpecTime=0;
+function pushSpecColumn(){const freqDb=new Float32Array(analyser.frequencyBinCount);analyser.getFloatFrequencyData(freqDb);spCtx.drawImage(specCanvas,-1,0);const H=specCanvas.height,γ=parseFloat(ui.gamma.value);const img=spCtx.createImageData(1,H);for(let y=0;y<H;y++){const bin=Math.round((H-1-y)*freqDb.length/H);let t=(freqDb[bin]-analyser.minDecibels)/(analyser.maxDecibels-analyser.minDecibels);t=Math.min(1,Math.max(0,t));t=Math.pow(t,1/γ);const gray=Math.round((1-t)*255);const i=y*4;img.data[i]=gray;img.data[i+1]=gray;img.data[i+2]=gray;img.data[i+3]=255;}spCtx.putImageData(img,specCanvas.width-1,0);}
+function loop(t=0){analyser.getByteTimeDomainData(timeBuf);let sum=0;for(let i=0;i<timeBuf.length;i++){const v=(timeBuf[i]-128)/128;sum+=v*v;}const rms=Math.sqrt(sum/timeBuf.length);const db=20*Math.log10(rms+1e-9)+100-2;drawLAeq(db);if(!lastSpecTime||(t-lastSpecTime)>=50){pushSpecColumn();lastSpecTime=t;}rafId=requestAnimationFrame(loop);}
+
+// 方位スキャン
+const scanCanvas=document.getElementById('scanCanvas'),scCtx=scanCanvas.getContext('2d');let scanHist=new Array(360).fill(0),scanning=false;
+document.getElementById('scanBtn').onclick=()=>{if(!audioCtx){alert('先にマイク開始');return;}scanHist.fill(0);scanning=true;scCtx.clearRect(0,0,scanCanvas.width,scanCanvas.height);const onOri=(e)=>{if(!scanning)return;const az=Math.round((e.alpha||0))%360;analyser.getByteTimeDomainData(timeBuf);let sum=0;for(let i=0;i<timeBuf.length;i++){const v=(timeBuf[i]-128)/128;sum+=v*v;}const rms=Math.sqrt(sum/timeBuf.length);const db=20*Math.log10(rms+1e-9)+100-2;scanHist[az]=scanHist[az]*0.9+db*0.1;scCtx.fillStyle='#06121f';scCtx.fillRect(0,0,scanCanvas.width,scanCanvas.height);const H=scanCanvas.height,W=scanCanvas.width;let max=-1e9,min=1e9;scanHist.forEach(v=>{if(v){max=Math.max(max,v);min=Math.min(min,v);}});for(let x=0;x<W;x++){const deg=Math.round(x*360/W)%360;const v=scanHist[deg]||0;const t=(v-min)/Math.max(1,(max-min));const y=H-t*H;scCtx.fillStyle=`hsl(${Math.round(240-240*t)},90%,${40+30*t}%)`;scCtx.fillRect(x,y,1,H-y);}};window.addEventListener('deviceorientation',onOri,{once:false});setTimeout(()=>{scanning=false;window.removeEventListener('deviceorientation',onOri);},12000);};
+
+// 物件/土地
+document.getElementById('btnGps').onclick=async()=>{try{const p=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{enableHighAccuracy:true,timeout:8000}));document.getElementById('addr').value=`(${p.coords.latitude.toFixed(6)}, ${p.coords.longitude.toFixed(6)})`;}catch(e){alert('位置取得失敗:'+e.message);}};
+document.getElementById('btnFetchLand').onclick=async()=>{const wk=document.getElementById('wkUrl').value.trim();const addrTxt=document.getElementById('addr').value;let lat=null,lng=null;const m=addrTxt.match(/([-+]?\d+\.\d+)\D+([-+]?\d+\.\d+)/);if(m){lat=parseFloat(m[1]);lng=parseFloat(m[2]);}if(!wk||!lat){alert('Workers URLと座標を設定してください');return;}try{const land=await (await fetch(`${wk}/land?lat=${lat}&lng=${lng}`)).json();const prices=(land.data||[]).map(x=>parseFloat(x.PricePerSquareMeter||0)).filter(Boolean);const near=prices.length?Math.round(prices.sort((a,b)=>a-b)[Math.floor(prices.length/2)]/1000):0;document.getElementById('near').value=near;const rj=await (await fetch(`${wk}/rosenka?lat=${lat}&lng=${lng}`)).json();if(rj.price_1000yen_m2!=null)document.getElementById('rosenka').value=rj.price_1000yen_m2;document.getElementById('koushi').value=near;const a=Number(document.getElementById('rosenka').value||0);const b=Number(document.getElementById('koushi').value||0);const c=Number(document.getElementById('near').value||0);const avg=Math.round((a+b+c)/3);document.getElementById('avg3').value=avg;const m2=Number(document.getElementById('landM2').value||0);const landValueMan=Math.round(avg*m2/1000);const priceMan=Number(document.getElementById('priceMan').value||0);document.getElementById('landValueMan').value=landValueMan;document.getElementById('ratio').value=priceMan?Math.round(landValueMan/priceMan*100):0;}catch(e){alert('取得失敗:'+e.message);}};
+
+// DSCR
+function calcDSCR(){const rent=Number(document.getElementById('rent').value||0);const occ=Number(document.getElementById('occ').value||0.95);const exp=Number(document.getElementById('exp').value||0.25);const fix=Number(document.getElementById('fix').value||0);const loanMan=Number(document.getElementById('loanMan').value||0);const rate=Number(document.getElementById('rate').value||0.02);const years=Number(document.getElementById('years').value||30);const gross=rent*12*occ;const noi=Math.max(0,gross*(1-exp)-fix);const r=rate;const n=years*12;const pv=loanMan*10000;const m=r/12*Math.pow(1+r/12,n)/(Math.pow(1+r/12,n)-1);const annual=m*pv*12;const dscr=noi>0?(noi/annual):0;document.getElementById('noi').textContent='NOI: '+Math.round(noi).toLocaleString();document.getElementById('annualPay').textContent='年返済: '+Math.round(annual).toLocaleString();document.getElementById('dscrOut').textContent='DSCR: '+dscr.toFixed(2)+(dscr>=1.1?' 良好':' 要検討');}
+['rent','occ','exp','fix','loanMan','rate','years'].forEach(id=>document.getElementById(id).oninput=calcDSCR);calcDSCR();
+</script>
+</body>
+</html>
