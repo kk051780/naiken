@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>内見ユーティリティ（全部入り 単一HTML v7.1）</title>
+<style>
+:root{--bg:#0f1928;--panel:#10243d;--ink:#e9f3ff;--mut:#9ab0ca;--accent:#43b5ff;--ok:#29d17d;--warn:#ffcd4a;--bad:#ff6b6b;}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif}
+header{position:sticky;top:0;background:rgba(15,25,40,.95);backdrop-filter:blur(6px);z-index:10;border-bottom:1px solid #2a3f5b;padding:10px 12px}
+h1{font-size:18px;margin:0}
+#tabs{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.tab{padding:8px 12px;border:1px solid #2b4a6b;border-radius:10px;background:#142a46;color:#def;cursor:pointer}
+.tab.active{background:var(--accent);color:#001428;border-color:#52c4ff;font-weight:700}
+main{padding:12px} .panel{display:none;background:var(--panel);border:1px solid #274563;border-radius:12px;padding:12px} .panel.active{display:block}
+.btn,select,.inp{background:#0f2036;border:1px solid #2b4666;color:var(--ink);padding:10px 12px;border-radius:10px}
+.btn.primary{background:var(--accent);color:#001428;border-color:#57c9ff;font-weight:700}
+.btn:disabled{opacity:.55} .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.small{font-size:12px;color:var(--mut)} .badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#173256;border:1px solid #2a4a6b;font-size:12px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px} @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+#stageWrap{position:relative;border:1px solid #294463;border-radius:12px;overflow:hidden;max-width:960px;margin:auto;background:#000}
+#photoBase{max-width:100%;display:block;background:#000}
+.sprite{position:absolute;left:0;top:0;transform-origin:center center;cursor:move;user-select:none;touch-action:none}
+.sprite img{display:block;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.35))}
+.sprite:focus{outline:2px solid var(--accent)}
+#baselineOverlay{position:absolute;inset:0;display:none;pointer-events:auto}
+#baselineOverlay.active{display:block;cursor:crosshair}
+#baselineOverlay .mark{position:absolute;width:10px;height:10px;border:2px solid #ffd24a;border-radius:50%;transform:translate(-50%,-50%)}
+canvas{background:#000;border-radius:10px}
+.axisWrap{display:grid;grid-template-columns:36px 1fr 16px;gap:8px;align-items:center}
+.yticks{font-size:11px;color:#bcd} .yticks div{height:calc(100%/6);display:flex;align-items:flex-end;justify-content:flex-end}
+.colorbar{height:100%;background:linear-gradient(180deg,#00f,#0ff,#0f0,#ff0,#f80,#f00);border-radius:6px;border:1px solid #26425f}
+table{width:100%;border-collapse:collapse;font-size:14px} th,td{border:1px solid #2a4a6b;padding:6px} th{background:#14365a}
+footer{text-align:center;color:#9fb7d3;font-size:12px;padding:10px}
+</style>
+</head>
+<body>
+<header>
+  <h1>不動産 内見ユーティリティ（全部入り 単一HTML v7.1）</h1>
+  <div id="tabs"></div>
+</header>
+<main>
+  <!-- ステージング -->
+  <section id="staging" class="panel active">
+    <div class="row">
+      <button class="btn" id="btnCam">カメラ起動</button>
+      <button class="btn" id="btnShot">撮影</button>
+      <label class="btn"><input id="filePick" type="file" accept="image/*" hidden>写真を選ぶ</label>
+      <button class="btn" id="btnAuto">家具 自動配置</button>
+      <button class="btn" id="btnClear">家具 クリア</button>
+      <span class="badge" id="scaleBadge">スケール未設定</span>
+    </div>
+    <div class="row">
+      <label>基準長さ(m) <input id="baseMeters" class="inp" type="number" step="0.01" value="2.0"></label>
+      <button class="btn" id="btnBaseline">確定（基準2点）</button>
+      <label>ズーム<input id="zoomRange" type="range" min="1" max="5" step="0.1" value="1"></label>
+      <label>向き<select id="orient" class="inp"><option value="0">標準</option><option value="90">右90°</option><option value="270">左90°</option></select></label>
+    </div>
+    <div id="stageWrap">
+      <img id="photoBase" alt="背景" />
+      <div id="baselineOverlay"></div>
+    </div>
+    <div class="small">使い方：カメラ起動→撮影、または写真を選ぶ。<br>「確定（基準2点）」→画像上で2点をクリック→「基準長さ(m)」で実寸スケール確定。家具は自動配置後ドラッグ/ピンチ（ダブルタップ削除）。</div>
+  </section>
+
+  <!-- 騒音 -->
+  <section id="noise" class="panel">
+    <div class="row">
+      <button class="btn primary" id="btnMicStart">マイク計測開始</button>
+      <button class="btn" id="btnMicStop">停止</button>
+      <span class="badge">HTTPSで開いてください（file://不可）</span>
+    </div>
+    <div class="row">
+      <label>表示レンジ(dBFS) 下限 <input id="dbMin" type="range" min="-100" max="-20" value="-80"></label>
+      <label>時間幅(s) <input id="timeWin" type="range" min="2" max="30" value="10"></label>
+      <label>周波数上限(Hz) <input id="maxHz" type="range" min="1000" max="22050" step="1000" value="8000"></label>
+    </div>
+    <div class="row axisWrap">
+      <div class="yticks" id="yticks"></div>
+      <canvas id="spec" width="720" height="256"></canvas>
+      <div class="colorbar"></div>
+    </div>
+    <div class="row">
+      <canvas id="wave" width="720" height="120"></canvas>
+      <span id="splStats" class="badge">最小: - / 最大: - / 平均: -</span>
+    </div>
+    <hr>
+    <div class="row">
+      <h3 style="margin:0">簡易 音響ホログラフィ（ベータ）</h3>
+      <button class="btn" id="btnHoloOn">スキャン開始</button>
+      <button class="btn" id="btnHoloOff">停止</button>
+      <span class="small">端末を水平方向にゆっくり左右へ。強い方向ほど色が濃く表示（単一マイクのため目安）。</span>
+    </div>
+  </section>
+
+  <!-- 間取り・実寸 -->
+  <section id="measure" class="panel">
+    <div class="row">
+      <label>幅(m) <input id="mw" class="inp" type="number" step="0.1" value="3.6"></label>
+      <label>奥行(m) <input id="md" class="inp" type="number" step="0.1" value="2.7"></label>
+      <button class="btn" id="btnAddRoom">追加</button>
+      <button class="btn" id="btnClearRoom">リセット</button>
+    </div>
+    <table>
+      <thead><tr><th>#</th><th>幅</th><th>奥行</th><th>面積(㎡)</th></tr></thead>
+      <tbody id="roomsT"></tbody>
+    </table>
+  </section>
+
+  <!-- 物件情報 / 土地値比率 -->
+  <section id="land" class="panel">
+    <div class="grid2">
+      <div>
+        <div class="row"><label>価格(万円) <input id="priceMan" class="inp" type="number"></label>
+          <label>土地面積(㎡) <input id="landArea" class="inp" type="number"></label></div>
+        <div class="row"><label>住所 <input id="addr" class="inp" style="min-width:280px"></label></div>
+        <div class="row"><button class="btn" id="btnGPS">GPS取得</button><span id="gpsOut" class="badge">未取得</span></div>
+        <hr>
+        <div class="row">
+          <label>路線価(千円/㎡) <input id="rosenka" class="inp" type="number"></label>
+          <label>公示価格(千円/㎡) <input id="koji" class="inp" type="number"></label>
+          <label>近傍成約(千円/㎡) <input id="nearby" class="inp" type="number"></label>
+          <button class="btn primary" id="btnAvg">3点平均</button>
+        </div>
+        <div class="row">
+          <span id="avgOut" class="badge">3点平均: -</span>
+          <span id="ratioOut" class="badge">土地値比率: -</span>
+        </div>
+      </div>
+      <div>
+        <h4 style="margin:4px 0">CORS対策（Cloudflare Workers 雛形）</h4>
+        <textarea id="workerCode" class="inp" style="width:100%;height:140px"></textarea>
+        <label>公開URL <input id="workerUrl" class="inp" placeholder="https://xxxxx.workers.dev/" style="width:100%"></label>
+        <button class="btn" id="btnProxyTest">テスト取得</button>
+        <div id="proxyLog" class="small"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 収支 / DSCR -->
+  <section id="dscr" class="panel">
+    <div class="grid2">
+      <div>
+        <div class="row"><label>月額家賃(円) <input id="rent" class="inp" type="number" value="70000"></label>
+          <label>稼働率 <input id="occ" class="inp" type="number" step="0.01" value="0.95"></label></div>
+        <div class="row"><label>経費率 <input id="opex" class="inp" type="number" step="0.01" value="0.25"></label>
+          <select id="opexPreset" class="inp">
+            <option value="0.20">築0–5年:0.20</option>
+            <option value="0.25" selected>築6–15年:0.25</option>
+            <option value="0.30">築16–25年:0.30</option>
+            <option value="0.35">築26年以上:0.35</option>
+          </select></div>
+        <details class="panel" open style="padding:8px">
+          <summary>固定費の内訳</summary>
+          <div class="row"><label>管理/巡回 <input id="fcMgmt" class="inp" type="number" value="36000"></label>
+            <label>固定資産税 <input id="fcTax" class="inp" type="number" value="80000"></label></div>
+          <div class="row"><label>火災保険 <input id="fcIns" class="inp" type="number" value="15000"></label>
+            <label>共用光熱通信 <input id="fcUtil" class="inp" type="number" value="24000"></label></div>
+          <div class="row"><label>その他 <input id="fcEtc" class="inp" type="number" value="10000"></label>
+            <span id="fcSum" class="badge">固定費合計: 0</span></div>
+        </details>
+      </div>
+      <div>
+        <div class="row"><label>借入額(円) <input id="loan" class="inp" type="number" value="15000000"></label>
+          <label>金利 <input id="rate" class="inp" type="number" step="0.001" value="0.02"></label>
+          <label>返済年数 <input id="years" class="inp" type="number" value="30"></label></div>
+        <button class="btn primary" id="btnCalc">計算</button>
+        <div class="row"><span id="noiOut" class="badge">NOI: -</span><span id="debtOut" class="badge">年返済: -</span><span id="dscrOut" class="badge">DSCR: -</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- チェック -->
+  <section id="check" class="panel">
+    <div class="row">
+      <button class="btn" id="btnAddChk">項目を追加</button>
+      <button class="btn" id="btnExport">レポート(HTML)保存</button>
+    </div>
+    <table>
+      <thead><tr><th>項目</th><th>判定</th><th>数量</th><th>メモ</th><th>写真/動画</th></tr></thead>
+      <tbody id="chkT"></tbody>
+    </table>
+    <div class="small">水回りはガイド順に：キッチン→浴室→洗面→トイレ。各行の「写真/動画」から撮影/添付。</div>
+  </section>
+
+  <!-- 保存 -->
+  <section id="save" class="panel">
+    <div class="row">
+      <button class="btn" id="btnSaveHTML">この画面をオフライン保存(HTML)</button>
+      <a id="dlLink" class="btn" download="naiken_allin_v7_1.html" style="display:none">ダウンロード</a>
+    </div>
+  </section>
+</main>
+
+<footer>© 内見ユーティリティ 単一HTML v7.1</footer>
+
+<script>
+/* Tabs */
+const P=['staging','noise','measure','land','dscr','check','save'];
+const wrap=document.getElementById('tabs');
+P.forEach((id,i)=>{ const b=document.createElement('button'); b.className='tab'+(i==0?' active':''); b.textContent=['ステージング','騒音','間取り','物件/土地値','収支/DSCR','チェック','保存'][i];
+  b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active'); document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active')); document.getElementById(id).classList.add('active');}; wrap.appendChild(b); });
+
+/* ===== ステージング ===== */
+const photoBase=document.getElementById('photoBase');
+const stageWrap=document.getElementById('stageWrap');
+const overlay=document.getElementById('baselineOverlay');
+let videoStream=null; let pxPerM=null;
+function setOrientation(deg){ photoBase.style.transform = 'rotate('+deg+'deg)'; }
+document.getElementById('orient').onchange=(e)=> setOrientation(e.target.value);
+
+document.getElementById('btnCam').onclick=async()=>{
+  try{
+    videoStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+    const v=document.createElement('video'); v.playsInline=true; v.muted=true; v.srcObject=videoStream; await v.play();
+    const c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight; const cx=c.getContext('2d'); cx.drawImage(v,0,0);
+    photoBase.src = c.toDataURL('image/jpeg',0.92);
+    // zoom constraints if supported
+    const track = videoStream.getVideoTracks()[0];
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    const zoomRange = document.getElementById('zoomRange');
+    if(caps.zoom){ zoomRange.min=caps.zoom.min; zoomRange.max=caps.zoom.max; zoomRange.step=caps.zoom.step||0.1; }
+    zoomRange.oninput = async()=>{ try{ await track.applyConstraints({advanced:[{zoom: parseFloat(zoomRange.value)}]}); }catch(_){ /* fallback at capture */ } };
+  }catch(e){ alert('カメラ起動失敗: '+e.message); }
+};
+document.getElementById('btnShot').onclick=()=>{
+  if(!videoStream){ alert('先にカメラ起動'); return; }
+  const v=document.createElement('video'); v.srcObject=videoStream; v.muted=true; v.playsInline=true;
+  v.onloadedmetadata=()=>{ v.play(); const cw=v.videoWidth, ch=v.videoHeight; const c=document.createElement('canvas'); c.width=cw; c.height=ch; const cx=c.getContext('2d'); cx.drawImage(v,0,0); photoBase.src=c.toDataURL('image/jpeg',0.92); }
+};
+document.getElementById('filePick').onchange=(e)=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>photoBase.src=ev.target.result; r.readAsDataURL(f); };
+
+// Baseline two points
+document.getElementById('btnBaseline').onclick=()=>{ overlay.classList.add('active'); overlay.innerHTML=''; document.getElementById('scaleBadge').textContent='画像上で2点を指定'; };
+overlay.addEventListener('click',(e)=>{
+  if(!overlay.classList.contains('active')) return;
+  const r = overlay.getBoundingClientRect(); const x=e.clientX-r.left; const y=e.clientY-r.top;
+  const m=document.createElement('div'); m.className='mark'; m.style.left=x+'px'; m.style.top=y+'px'; overlay.appendChild(m);
+  if(overlay.querySelectorAll('.mark').length===2){
+    const a=overlay.querySelectorAll('.mark')[0]; const b=overlay.querySelectorAll('.mark')[1];
+    const dx=parseFloat(a.style.left)-parseFloat(b.style.left); const dy=parseFloat(a.style.top)-parseFloat(b.style.top);
+    const pix=Math.hypot(dx,dy); const meters=parseFloat(document.getElementById('baseMeters').value||'1');
+    pxPerM = pix/meters; overlay.classList.remove('active');
+    document.getElementById('scaleBadge').textContent = 'スケール: '+pxPerM.toFixed(1)+' px/m';
+  }
+});
+
+// Furniture sprites (simple SVG URIs)
+const SPRITES=[
+  {key:'sofa', w:1.8, h:0.8, svg:'<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160" viewBox="0 0 240 160"><rect x="10" y="20" rx="16" ry="16" width="220" height="120" fill="#4878ff"/><rect x="20" y="30" rx="10" ry="10" width="200" height="100" fill="#ffffff22"/><rect x="20" y="60" rx="8" ry="8" width="90" height="60" fill="#00000022"/><rect x="130" y="60" rx="8" ry="8" width="90" height="60" fill="#00000022"/><rect x="100" y="20" width="40" height="12" fill="#00000033"/></svg>'},
+  {key:'table', w:1.2, h:0.6, svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120" viewBox="0 0 200 120"><rect x="8" y="8" rx="14" ry="14" width="184" height="104" fill="#a9784a"/><rect x="20" y="20" rx="10" ry="10" width="160" height="80" fill="#ffffff22"/><circle cx="60" cy="60" r="6" fill="#00000033"/><circle cx="140" cy="60" r="6" fill="#00000033"/></svg>'},
+  {key:'plant', w:0.6, h:0.6, svg:'<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140" viewBox="0 0 140 140"><circle cx="70" cy="70" r="64" fill="#36a16a"/><circle cx="70" cy="70" r="52" fill="#ffffff22"/><path d="M70 30 C 90 40, 100 55, 70 70 C 40 55, 50 40, 70 30 Z" fill="#0f0a"/><rect x="48" y="90" width="44" height="20" rx="6" ry="6" fill="#633"/></svg>'},
+  {key:'bed', w:2.0, h:0.9, svg:'<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160" viewBox="0 0 260 160"><rect x="6" y="6" rx="14" ry="14" width="248" height="148" fill="#7d8fb1"/><rect x="20" y="20" width="220" height="60" rx="8" ry="8" fill="#ffffffee"/><rect x="20" y="90" width="220" height="50" rx="8" ry="8" fill="#ffffffaa"/></svg>'}
+];
+function addSprite(def, x, y){
+  const d=document.createElement('div'); d.className='sprite'; d.tabIndex=0;
+  const img=new Image(); img.src='data:image/svg+xml;base64,'+btoa(def.svg); d.appendChild(img);
+  const ppm = pxPerM || 120; const W=Math.max(40, def.w*ppm), H=Math.max(40, def.h*ppm);
+  d.style.width=W+'px'; d.style.height=H+'px'; d.style.left=(x||10)+'px'; d.style.top=(y||10)+'px';
+  stageWrap.appendChild(d);
+  // Dragging within bounds
+  let dragging=false, sx=0, sy=0, sl=0, st=0;
+  d.addEventListener('pointerdown', ev=>{ dragging=true; d.setPointerCapture(ev.pointerId); sx=ev.clientX; sy=ev.clientY; sl=parseFloat(d.style.left); st=parseFloat(d.style.top); });
+  d.addEventListener('pointermove', ev=>{ if(!dragging) return; const nl=sl+(ev.clientX-sx), nt=st+(ev.clientY-sy);
+    const maxL=stageWrap.clientWidth - d.clientWidth; const maxT=stageWrap.clientHeight - d.clientHeight;
+    d.style.left=Math.max(0, Math.min(nl, maxL))+'px'; d.style.top=Math.max(0, Math.min(nt, maxT))+'px'; });
+  d.addEventListener('pointerup', ev=>{ dragging=false; d.releasePointerCapture(ev.pointerId); });
+  d.addEventListener('dblclick', ()=> d.remove());
+}
+document.getElementById('btnAuto').onclick=()=>{ const areaW=stageWrap.clientWidth, areaH=stageWrap.clientHeight; let x=10;
+  SPRITES.forEach(def=>{ addSprite(def, x, areaH*0.65 + 10); x += (areaW/SPRITES.length); }); };
+document.getElementById('btnClear').onclick=()=>{ stageWrap.querySelectorAll('.sprite').forEach(n=>n.remove()); };
+
+/* ===== 騒音 ===== */
+let audioCtx=null, analyser=null, rafId=null;
+const spec=document.getElementById('spec'), wave=document.getElementById('wave');
+const sctx=spec.getContext('2d'), wctx=wave.getContext('2d');
+function buildYTicks(maxHz){
+  const yt=document.getElementById('yticks'); yt.innerHTML='';
+  for(let i=0;i<=6;i++){ const d=document.createElement('div'); const f=Math.round((1 - i/6)*maxHz); d.textContent = (f>=1000?(f/1000).toFixed(1)+'k':f)+'Hz'; yt.appendChild(d); }
+}
+buildYTicks(parseInt(document.getElementById('maxHz').value));
+document.getElementById('maxHz').oninput=(e)=>buildYTicks(parseInt(e.target.value));
+
+document.getElementById('btnMicStart').onclick=async()=>{
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0.7;
+    const src = audioCtx.createMediaStreamSource(stream); src.connect(analyser);
+    const freq = new Uint8Array(analyser.frequencyBinCount);
+    const time = new Uint8Array(analyser.fftSize);
+    function hsl(h,s,l){ return `hsl(${h} ${s}% ${l}%)`; }
+    function loop(){
+      rafId = requestAnimationFrame(loop);
+      const dbMin=parseFloat(document.getElementById('dbMin').value);
+      const maxHz=parseFloat(document.getElementById('maxHz').value);
+      analyser.getByteFrequencyData(freq);
+      // shift left
+      const W=spec.width, H=spec.height;
+      const img=sctx.getImageData(1,0,W-1,H); sctx.putImageData(img,0,0);
+      for(let y=0;y<H;y++){ const bin = Math.floor((y/H) * (maxHz/(audioCtx.sampleRate/2)) * freq.length); const v = freq[bin]||0;
+        const norm = Math.max(0, Math.min(1, (v - (-(dbMin))) / 255 ));
+        const col = hsl(210 - 210*norm, 100, 10 + 50*norm);
+        sctx.fillStyle = col; sctx.fillRect(W-1, H-1-y, 1, 1);
+      }
+      // waveform
+      analyser.getByteTimeDomainData(time); wctx.fillStyle='#000'; wctx.fillRect(0,0,wave.width,wave.height);
+      wctx.strokeStyle='#57caff'; wctx.beginPath();
+      for(let i=0;i<time.length;i++){ const x=i/time.length*wave.width; const y=(time[i]/255)*wave.height; if(i==0) wctx.moveTo(x,y); else wctx.lineTo(x,y);}
+      wctx.stroke();
+      let min=255, max=0, sum=0; for(const x of time){ if(x<min)min=x; if(x>max)max=x; sum+=x; }
+      const avg = sum/time.length;
+      document.getElementById('splStats').textContent = `最小: ${min} / 最大: ${max} / 平均: ${avg.toFixed(1)}`;
+    }
+    loop();
+  }catch(e){ alert('マイク起動失敗: '+e.message); }
+};
+document.getElementById('btnMicStop').onclick=()=>{ if(rafId) cancelAnimationFrame(rafId); if(audioCtx) audioCtx.close(); };
+
+/* 簡易ホログラフィ */
+let holoOn=false; const holoBins=new Array(72).fill(0);
+document.getElementById('btnHoloOn').onclick=()=>{ holoOn=true; };
+document.getElementById('btnHoloOff').onclick=()=>{ holoOn=false; };
+window.ad
