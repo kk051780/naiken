@@ -1,304 +1,245 @@
-<!doctype html>
-<html lang="ja">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>内見ユーティリティ 単一HTML v7.2</title>
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>内見ステージング（クリック再発防止・3D回転・基準2点）</title>
 <style>
-:root{--bg:#0f1928;--panel:#10243d;--ink:#e9f3ff;--mut:#9ab0ca;--accent:#43b5ff}
-*{box-sizing:border-box}body{margin:0;background:#0f1928;color:var(--ink);font-family:system-ui,-apple-system,Roboto,"Noto Sans JP",sans-serif}
-header{position:sticky;top:0;z-index:9;background:#0f1928ee;backdrop-filter:blur(6px);border-bottom:1px solid #274563}
-h1{font-size:18px;margin:8px 12px}
-nav{display:flex;gap:8px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid #274563}
-nav button{padding:8px 12px;border-radius:10px;border:1px solid #2b4a6b;background:#142a46;color:#def;cursor:pointer}
-nav button.active{background:var(--accent);color:#00223b;border-color:#6dd0ff;font-weight:700}
-main{padding:12px}
-.panel{display:none;background:#10243d;border:1px solid #274563;border-radius:12px;padding:12px}
-.panel.active{display:block}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
-.btn,select,.inp{background:#0f2036;border:1px solid #2b4666;color:#e9f3ff;padding:10px 12px;border-radius:10px}
-.btn.primary{background:var(--accent);color:#001428;border-color:#6dd0ff;font-weight:700}
-.small{font-size:12px;color:#9ab0ca}
-.badge{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid #2a4a6b;background:#173256}
-#stage{position:relative;border:1px solid #294463;border-radius:12px;overflow:hidden;max-width:960px;margin:auto;background:#000;min-height:240px}
-#photo{display:block;width:100%;height:auto;background:#000}
-#overlay{position:absolute;inset:0;display:none}
-#overlay.active{display:block;cursor:crosshair}
-#overlay .mark{position:absolute;width:12px;height:12px;border:2px solid #ffd24a;border-radius:50%;transform:translate(-50%,-50%)}
-.sprite{position:absolute;left:0;top:0;transform-origin:center;cursor:move;user-select:none;touch-action:none}
-.sprite img{display:block;pointer-events:none;filter:drop-shadow(0 2px 4px rgba(0,0,0,.4))}
-.sprite:focus{outline:2px solid var(--accent)}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-@media(max-width:900px){.grid2{grid-template-columns:1fr}}
-canvas{background:#000;border-radius:10px}
-.axis{display:grid;grid-template-columns:40px 1fr 14px;gap:8px;align-items:center}
-.axis .yt div{height:calc(100%/6);display:flex;align-items:flex-end;justify-content:flex-end;font-size:11px;color:#bcd}
-.cbar{height:100%;background:linear-gradient(180deg,#00f,#0ff,#0f0,#ff0,#f80,#f00);border:1px solid #26425f;border-radius:6px}
-table{width:100%;border-collapse:collapse;font-size:14px}th,td{border:1px solid #2a4a6b;padding:6px}th{background:#14365a}
-footer{text-align:center;color:#9fb7d3;padding:10px;font-size:12px}
-</style>
-</head>
+:root{--bg:#0e1a2a;--panel:#132338;--btn:#1f3b5b;--text:#eaf3ff;--accent:#31c3ff}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif}
+.toolbar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;gap:8px;padding:10px;background:linear-gradient(180deg,rgba(14,26,42,.95),rgba(14,26,42,.75));backdrop-filter:blur(6px)}
+.btn{background:var(--btn);border:none;border-radius:10px;color:var(--text);padding:10px 14px;font-weight:600;cursor:pointer}
+.btn.primary{background:#0ea5e9}
+.small{font-size:12px;padding:6px 8px}
+.panel{background:var(--panel);margin:10px;border-radius:14px;padding:10px}
+.hint{opacity:.85;font-size:12px}
+#wrap{position:relative;margin:10px;border-radius:14px;background:#000;overflow:hidden;
+  perspective: 1200px; transform-style:preserve-3d}
+#stage,#ov{display:block;width:100%;height:auto}
+#ov{position:absolute;left:0;top:0;pointer-events:none}
+.gallery{display:flex;gap:8px;overflow:auto;padding:8px}
+.gallery img{height:64px;border-radius:10px;cursor:pointer}
+.sprite{position:absolute;left:0;top:0;touch-action:none;user-select:none;transform-origin:center center}
+.sprite .hit{position:absolute;inset:0;border:2px solid transparent;border-radius:12px}
+.sprite.selected .hit{border-color:var(--accent)}
+.handle{position:absolute;right:-16px;bottom:-16px;width:28px;height:28px;border-radius:50%;background:var(--accent);border:2px solid #062238;display:flex;align-items:center;justify-content:center;color:#062238;font-weight:800}
+.controls{position:sticky;bottom:0;z-index:45;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;padding:10px;background:linear-gradient(0deg,rgba(14,26,42,.85),transparent)}
+.range{display:flex;align-items:center;gap:6px}
+.range input[type=range]{width:180px}
+.badge{padding:4px 8px;border-radius:8px;background:#0b2d4d}
+</style></head>
 <body>
-<header><h1>内見ユーティリティ（単一HTML v7.2）</h1></header>
+<div class="toolbar">
+  <button id="cam" class="btn">カメラ起動</button>
+  <button id="shot" class="btn">撮影</button>
+  <label class="btn" for="file">写真を選ぶ</label>
+  <input id="file" type="file" accept="image/*" capture="environment" style="display:none">
+  <label class="btn" for="furn">家具画像を追加</label>
+  <input id="furn" type="file" accept="image/*" multiple style="display:none">
+  <button id="auto" class="btn primary">家具 自動配置</button>
+  <button id="clear" class="btn">家具 クリア</button>
+  <button id="panic" class="btn small">オーバーレイ強制OFF</button>
+  <span id="msg" class="hint"></span>
+</div>
 
-<nav id="tabs">
-  <button data-p="stg" class="active">ステージング</button>
-  <button data-p="noz">騒音</button>
-  <button data-p="mea">間取り</button>
-  <button data-p="land">物件/土地値比率</button>
-  <button data-p="fin">収支/DSCR</button>
-  <button data-p="chk">チェック</button>
-  <button data-p="sav">保存</button>
-</nav>
+<div id="wrap">
+  <canvas id="stage" width="1280" height="720"></canvas>
+  <canvas id="ov" width="1280" height="720"></canvas>
+</div>
 
-<main>
-<!-- ステージング -->
-<section id="p-stg" class="panel active">
-  <div class="row">
-    <button class="btn" id="cam">カメラ起動</button>
-    <button class="btn" id="shot">撮影</button>
-    <label class="btn"><input id="pick" type="file" accept="image/*" hidden>写真を選ぶ</label>
-    <button class="btn" id="auto">家具 自動配置</button>
-    <button class="btn" id="clr">家具 クリア</button>
-    <span id="scaleBadge" class="badge">スケール未設定</span>
-  </div>
-  <div class="row">
-    <label>基準長さ(m) <input id="baseM" class="inp" type="number" step="0.01" value="2.0"></label>
-    <button class="btn" id="two">確定（基準2点）</button>
-    <label>ズーム<input id="zoom" type="range" min="1" max="5" step="0.1" value="1"></label>
-    <label>向き<select id="ori" class="inp">
-      <option value="0">標準</option><option value="90">右90°</option><option value="270">左90°</option>
-    </select></label>
-  </div>
+<div class="panel">
+  <div class="hint">手順: ①「カメラ起動→撮影」または「写真を選ぶ」。② <button id="pick" class="btn small">確定（基準2点）</button> を押し、画像上で2点クリック → 実寸入力：
+    <input id="len" type="number" step="0.01" value="2.0" style="width:80px"> m。③ 家具はギャラリーから配置（タップ）。</div>
+</div>
 
-  <div id="stage">
-    <img id="photo" alt="背景">
-    <div id="overlay"></div>
-  </div>
-  <div class="small">手順：カメラ→撮影 or 写真を選ぶ →「確定（基準2点）」で画像上の2点をクリック→「基準長さ(m)」に実寸を入れる→スケール確定→自動配置→ドラッグで位置調整（ダブルタップで削除）</div>
-</section>
+<div class="panel">
+  <div class="badge">家具ギャラリー</div>
+  <div id="gal" class="gallery"></div>
+</div>
 
-<!-- 騒音 -->
-<section id="p-noz" class="panel">
-  <div class="row">
-    <button class="btn primary" id="mOn">マイク計測開始</button>
-    <button class="btn" id="mOff">停止</button>
-    <span class="badge">HTTPS必須</span>
-  </div>
-  <div class="row">
-    <label>表示下限(dB相当) <input id="dbMin" type="range" min="-100" max="-20" value="-80"></label>
-    <label>時間幅(s) <input id="twin" type="range" min="2" max="30" value="12"></label>
-    <label>周波数上限(Hz) <input id="fmax" type="range" min="1000" max="22050" step="1000" value="8000"></label>
-  </div>
-  <div class="axis">
-    <div class="yt" id="yt"></div>
-    <canvas id="spec" width="720" height="256" aria-label="スペクトログラム"></canvas>
-    <div class="cbar" title="低→高"></div>
-  </div>
-  <div class="row">
-    <canvas id="wave" width="720" height="120" aria-label="波形"></canvas>
-    <span id="stats" class="badge">最小: - / 最大: - / 平均: -</span>
-  </div>
-  <div class="small">凡例：縦=周波数、横=時間、色=音量（青→赤）。</div>
-</section>
-
-<!-- 間取り -->
-<section id="p-mea" class="panel">
-  <div class="row">
-    <label>幅(m) <input id="mw" class="inp" type="number" step="0.1" value="3.6"></label>
-    <label>奥行(m) <input id="md" class="inp" type="number" step="0.1" value="2.7"></label>
-    <button class="btn" id="addR">追加</button>
-    <button class="btn" id="clrR">リセット</button>
-  </div>
-  <table>
-    <thead><tr><th>#</th><th>幅</th><th>奥行</th><th>面積(㎡)</th></tr></thead>
-    <tbody id="rt"></tbody>
-  </table>
-</section>
-
-<!-- 土地値比率 -->
-<section id="p-land" class="panel">
-  <div class="row">
-    <label>価格(万円) <input id="pri" class="inp" type="number"></label>
-    <label>土地面積(㎡) <input id="area" class="inp" type="number"></label>
-  </div>
-  <div class="row"><label>住所 <input id="addr" class="inp" style="min-width:280px"></label>
-    <button class="btn" id="gps">GPS取得</button><span id="gout" class="badge">未取得</span>
-  </div>
-  <div class="row">
-    <label>路線価(千円/㎡) <input id="ros" class="inp" type="number"></label>
-    <label>公示価格(千円/㎡) <input id="koj" class="inp" type="number"></label>
-    <label>近傍成約(千円/㎡) <input id="nb" class="inp" type="number"></label>
-    <button class="btn primary" id="avg3">3点平均</button>
-  </div>
-  <div class="row"><span id="avgOut" class="badge">3点平均: -</span><span id="ratio" class="badge">土地値比率: -</span></div>
-  <div class="small">※自動取得はCORS制約があるため、必要時はプロキシ等を設定してください。</div>
-</section>
-
-<!-- DSCR -->
-<section id="p-fin" class="panel">
-  <div class="grid2">
-    <div>
-      <div class="row"><label>月額家賃(円) <input id="rent" class="inp" type="number" value="70000"></label>
-        <label>稼働率 <input id="occ" class="inp" type="number" step="0.01" value="0.95"></label></div>
-      <div class="row"><label>経費率 <input id="opex" class="inp" type="number" step="0.01" value="0.25"></label>
-        <select id="opxP" class="inp">
-          <option value="0.20">築0–5年:0.20</option><option value="0.25" selected>築6–15年:0.25</option>
-          <option value="0.30">築16–25年:0.30</option><option value="0.35">築26年以上:0.35</option>
-        </select></div>
-      <details open class="panel" style="padding:8px">
-        <summary>固定費の内訳</summary>
-        <div class="row"><label>管理/巡回 <input id="fc1" class="inp" type="number" value="36000"></label>
-          <label>固定資産税 <input id="fc2" class="inp" type="number" value="80000"></label></div>
-        <div class="row"><label>火災保険 <input id="fc3" class="inp" type="number" value="15000"></label>
-          <label>共用光熱通信 <input id="fc4" class="inp" type="number" value="24000"></label></div>
-        <div class="row"><label>その他 <input id="fc5" class="inp" type="number" value="10000"></label>
-          <span id="fcSum" class="badge">固定費合計: 0</span></div>
-      </details>
-    </div>
-    <div>
-      <div class="row"><label>借入額(円) <input id="loan" class="inp" type="number" value="15000000"></label>
-        <label>金利 <input id="rate" class="inp" type="number" step="0.001" value="0.02"></label>
-        <label>返済年数 <input id="yrs" class="inp" type="number" value="30"></label></div>
-      <button class="btn primary" id="calc">計算</button>
-      <div class="row"><span id="noi" class="badge">NOI: -</span><span id="debt" class="badge">年返済: -</span><span id="dscr" class="badge">DSCR: -</span></div>
-    </div>
-  </div>
-</section>
-
-<!-- チェック -->
-<section id="p-chk" class="panel">
-  <div class="row"><button class="btn" id="addC">項目を追加</button></div>
-  <table>
-    <thead><tr><th>項目</th><th>判定</th><th>数量</th><th>メモ</th><th>写真/動画</th></tr></thead>
-    <tbody id="ct"></tbody>
-  </table>
-</section>
-
-<!-- 保存 -->
-<section id="p-sav" class="panel">
-  <div class="row">
-    <button class="btn" id="saveH">この画面をHTML保存</button>
-    <a id="dl" class="btn" download="naiken_v72.html" style="display:none">ダウンロード</a>
-  </div>
-</section>
-</main>
-
-<footer>© 単一HTML v7.2</footer>
+<div class="controls">
+  <div class="range">Yaw(水平) <input id="yaw" type="range" min="-180" max="180" value="0"><span id="yvw">0°</span></div>
+  <div class="range">Pitch(前後) <input id="pitch" type="range" min="-80" max="80" value="0"><span id="pvw">0°</span></div>
+  <div class="range">Roll(回転) <input id="roll" type="range" min="-180" max="180" value="0"><span id="rvw">0°</span></div>
+  <div class="range">スケール <input id="sc" type="range" min="0.2" max="3" step="0.01" value="1"><span id="svw">1.00×</span></div>
+  <div class="range">ズーム <input id="zoom" type="range" min="0.6" max="2.4" step="0.01" value="1"></div>
+</div>
 
 <script>
-/* ===== タブ ===== */
-document.querySelectorAll('#tabs button').forEach(btn=>{
-  btn.onclick=()=>{ document.querySelectorAll('#tabs button').forEach(b=>b.classList.remove('active')); btn.classList.add('active');
-    document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active')); document.getElementById('p-'+btn.dataset.p).classList.add('active'); };
+const wrap=document.getElementById('wrap');
+const stage=document.getElementById('stage'), ctx=stage.getContext('2d',{willReadFrequently:true});
+const ov=document.getElementById('ov'), octx=ov.getContext('2d');
+const gal=document.getElementById('gal'); const msg=(t)=>document.getElementById('msg').textContent=t;
+
+let base=null, ppm=null, picking=false, pts=[];
+
+/* ---------- 画像読み込み / 描画 ---------- */
+function fit(img){
+  const maxW=Math.min(window.innerWidth-20,1400), r=img.width/img.height, w=Math.min(maxW,img.width), h=w/r;
+  stage.width=w; stage.height=h; ov.width=w; ov.height=h; wrap.style.height=h+'px';
+  draw();
+}
+function draw(){ if(!base) return; ctx.clearRect(0,0,stage.width,stage.height); ctx.drawImage(base,0,0,stage.width,stage.height); }
+document.getElementById('file').onchange=e=>{
+  const f=e.target.files[0]; if(!f) return; const u=URL.createObjectURL(f); const img=new Image();
+  img.onload=()=>{ base=img; fit(img); URL.revokeObjectURL(u) }; img.src=u;
+};
+document.getElementById('cam').onclick=async()=>{
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    const v=document.createElement('video'); v.srcObject=stream; v.playsInline=true; await v.play();
+    const cx=document.createElement('canvas'); cx.width=v.videoWidth; cx.height=v.videoHeight;
+    cx.getContext('2d').drawImage(v,0,0); stream.getTracks().forEach(t=>t.stop());
+    const img=new Image(); img.onload=()=>{ base=img; fit(img) }; img.src=cx.toDataURL('image/jpeg',0.92);
+  }catch(e){ alert('カメラ失敗: '+e.message) }
+};
+document.getElementById('shot').onclick=draw;
+
+/* ---------- 基準2点（スケール確定）＋オーバーレイ再発防止 ---------- */
+const overlayGuard={ timer:null, on(){
+  ov.style.pointerEvents='auto';
+  clearTimeout(this.timer); this.timer=setTimeout(()=>this.off(),2000); // 2秒で自動OFF
+}, off(){ ov.style.pointerEvents='none'; msg('') } };
+document.getElementById('panic').onclick=()=>overlayGuard.off();
+
+document.getElementById('pick').onclick=()=>{
+  if(!base){ alert('先に画像を読み込んでください'); return; }
+  picking=true; pts=[]; octx.clearRect(0,0,ov.width,ov.height); msg('基準2点をクリック…'); overlayGuard.on();
+};
+ov.addEventListener('click',e=>{
+  if(!picking) return;
+  const r=ov.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top; pts.push({x,y});
+  octx.fillStyle='#ffd54a'; octx.strokeStyle='#ffd54a'; octx.lineWidth=3;
+  octx.beginPath(); octx.arc(x,y,6,0,Math.PI*2); octx.fill();
+  if(pts.length===2){
+    octx.beginPath(); octx.moveTo(pts[0].x,pts[0].y); octx.lineTo(pts[1].x,pts[1].y); octx.stroke();
+    const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y), m=parseFloat(document.getElementById('len').value)||1;
+    ppm=d/m; picking=false; overlayGuard.off(); msg('スケール:'+ppm.toFixed(1)+' px/m');
+  }else{ overlayGuard.on(); }
 });
 
-/* ===== ステージング ===== */
-const stage=document.getElementById('stage'), photo=document.getElementById('photo'), overlay=document.getElementById('overlay');
-let stream=null, pxPerM=null;
-document.getElementById('ori').onchange=e=>{ photo.style.transform='rotate('+e.target.value+'deg)'; };
-document.getElementById('cam').onclick=async()=>{
-  try{ stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-    const v=document.createElement('video'); v.playsInline=true; v.muted=true; v.srcObject=stream; await v.play();
-    const c=document.createElement('canvas'); c.width=v.videoWidth||1280; c.height=v.videoHeight||720; c.getContext('2d').drawImage(v,0,0,c.width,c.height);
-    photo.src=c.toDataURL('image/jpeg',0.9);
-    // ズーム（対応端末のみ）
-    const track=stream.getVideoTracks()[0]; const caps=track.getCapabilities?track.getCapabilities():{};
-    const zr=document.getElementById('zoom'); zr.oninput=null;
-    if(caps.zoom){ zr.min=caps.zoom.min; zr.max=caps.zoom.max; zr.step=caps.zoom.step||0.1;
-      zr.oninput=async()=>{ try{ await track.applyConstraints({advanced:[{zoom:parseFloat(zr.value)}]}); }catch(_){} }; }
-  }catch(e){ alert('カメラ失敗: '+e.message); }
-};
-document.getElementById('shot').onclick=()=>{
-  if(!stream) return alert('先にカメラ起動');
-  const v=document.createElement('video'); v.srcObject=stream; v.muted=true; v.playsInline=true;
-  v.onloadedmetadata=()=>{ v.play(); const c=document.createElement('canvas'); c.width=v.videoWidth; c.height=v.videoHeight; c.getContext('2d').drawImage(v,0,0); photo.src=c.toDataURL('image/jpeg',0.92); };
-};
-document.getElementById('pick').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader(); r.onload=ev=>{ photo.src=ev.target.result; }; r.readAsDataURL(f); };
+/* ---------- 家具ギャラリー（端末から追加） ---------- */
+function addToGallery(file){
+  const url=URL.createObjectURL(file), img=new Image();
+  img.onload=()=>{ const t=new Image(); t.src=url; t.alt=file.name;
+    t.onclick=()=>addSprite(img,1.8, stage.width*0.5, stage.height*0.75); gal.appendChild(t);
+  };
+  img.src=url;
+}
+document.getElementById('furn').onchange=e=>{ [...e.target.files].forEach(addToGallery); };
 
-function ensureOverlay(){ overlay.style.inset='0'; }
-document.getElementById('two').onclick=()=>{ overlay.classList.add('active'); overlay.innerHTML=''; ensureOverlay(); document.getElementById('scaleBadge').textContent='画像上の2点を指定'; };
-overlay.addEventListener('click',e=>{
-  if(!overlay.classList.contains('active')) return;
-  const r=overlay.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top;
-  const m=document.createElement('div'); m.className='mark'; m.style.left=x+'px'; m.style.top=y+'px'; overlay.appendChild(m);
-  if(overlay.querySelectorAll('.mark').length===2){
-    const a=overlay.querySelectorAll('.mark')[0], b=overlay.querySelectorAll('.mark')[1];
-    const dx=parseFloat(a.style.left)-parseFloat(b.style.left), dy=parseFloat(a.style.top)-parseFloat(b.style.top);
-    const pix=Math.hypot(dx,dy); const meters=parseFloat(document.getElementById('baseM').value||'1');
-    pxPerM=pix/meters; overlay.classList.remove('active'); document.getElementById('scaleBadge').textContent='スケール: '+pxPerM.toFixed(1)+' px/m';
+/* ---------- 3Dスプライト：Yaw/Pitch/Roll & ジェスチャ ---------- */
+const sprites=[]; let current=null;
+function addSprite(image, realWm, x,y){
+  const el=document.createElement('div'); el.className='sprite';
+  const scale= ppm ? (realWm*ppm)/image.width : 0.5;
+  el.style.left=(x||30)+'px'; el.style.top=(y||30)+'px';
+  el.style.width=image.width+'px'; el.style.height=image.height+'px';
+  el.style.background=`center/contain no-repeat url(${image.src})`;
+  el.innerHTML='<div class="hit"></div><div class="handle">⤮</div>';
+  wrap.appendChild(el);
+
+  const s={el,x:x||30,y:y||30,scale:scale,yaw:0,pitch:0,roll:0};
+  sprites.push(s); select(s); apply(s);
+
+  // ドラッグ移動
+  let dragging=false, p0=null, start=null;
+  el.querySelector('.hit').addEventListener('pointerdown',ev=>{
+    ev.preventDefault(); dragging=true; p0=pt(ev); start={x:s.x,y:s.y}; select(s);
+    window.addEventListener('pointermove',move); window.addEventListener('pointerup',up,{once:true});
+  });
+  function move(e){ if(!dragging) return; const p=pt(e); s.x=start.x+(p.x-p0.x); s.y=start.y+(p.y-p0.y); apply(s) }
+  function up(){ dragging=false; window.removeEventListener('pointermove',move) }
+
+  // ロール回転ハンドル
+  el.querySelector('.handle').addEventListener('pointerdown',ev=>{
+    ev.preventDefault(); const center=ctr(el); const base=angle(center,pt(ev)); const r0=s.roll;
+    const mv=e=>{ s.roll=r0+(angle(center,pt(e))-base); apply(s); updateUI() };
+    const up=()=>window.removeEventListener('pointermove',mv);
+    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up,{once:true});
+  });
+
+  // 2本指ジェスチャ：ピンチ＝スケール、ねじり＝ロール、平均水平移動=Yaw、平均垂直移動=Pitch
+  let touches=new Map(), g0=null;
+  el.addEventListener('touchstart',e=>{ if(e.touches.length>1) e.preventDefault() },{passive:false});
+  el.addEventListener('pointerdown',e=>{ touches.set(e.pointerId,pt(e)) });
+  el.addEventListener('pointermove',e=>{
+    if(!touches.has(e.pointerId)) return; touches.set(e.pointerId,pt(e));
+    if(touches.size===2){
+      const [a,b]=[...touches.values()], cx=(a.x+b.x)/2, cy=(a.y+b.y)/2;
+      const d=Math.hypot(a.x-b.x,a.y-b.y), ang=Math.atan2(b.y-a.y,b.x-a.x);
+      if(!g0){ g0={d,ang,cx,cy,scale:s.scale,yaw:s.yaw,pitch:s.pitch,roll:s.roll}; }
+      // ピンチ
+      s.scale=Math.max(.2,Math.min(3,g0.scale*(d/g0.d)));
+      // ねじり→Roll
+      s.roll=(g0.roll + (ang-g0.ang)*180/Math.PI);
+      // 平均移動→Yaw/Pitch
+      s.yaw=g0.yaw + (cx-g0.cx)*0.2;
+      s.pitch=g0.pitch - (cy-g0.cy)*0.2;
+      apply(s); updateUI();
+    }
+  });
+  window.addEventListener('pointerup',e=>{ touches.delete(e.pointerId); if(touches.size<2) g0=null });
+
+  // ダブルタップ削除
+  let last=0; el.querySelector('.hit').addEventListener('click',e=>{ const t=Date.now(); if(t-last<300){ removeSprite(s) } last=t });
+
+  return s;
+}
+function removeSprite(s){ s.el.remove(); const i=sprites.indexOf(s); if(i>=0) sprites.splice(i,1); if(current===s) select(null) }
+function select(s){ sprites.forEach(x=>x.el.classList.remove('selected')); current=s; if(s){ s.el.classList.add('selected'); syncUI(s) } }
+function apply(s){
+  s.el.style.left=s.x+'px'; s.el.style.top=s.y+'px';
+  s.el.style.transform=`translate(-50%,-50%) rotateZ(${s.roll}deg) rotateX(${s.pitch}deg) rotateY(${s.yaw}deg) scale(${s.scale})`;
+}
+function syncUI(s){
+  document.getElementById('yaw').value=s.yaw; document.getElementById('pitch').value=s.pitch; document.getElementById('roll').value=s.roll; document.getElementById('sc').value=s.scale;
+  updateUI();
+}
+function updateUI(){
+  if(!current) return;
+  document.getElementById('yvw').textContent=(+document.getElementById('yaw').value).toFixed(0)+'°';
+  document.getElementById('pvw').textContent=(+document.getElementById('pitch').value).toFixed(0)+'°';
+  document.getElementById('rvw').textContent=(+document.getElementById('roll').value).toFixed(0)+'°';
+  document.getElementById('svw').textContent=(+document.getElementById('sc').value).toFixed(2)+'×';
+}
+['yaw','pitch','roll','sc'].forEach(id=>{
+  document.getElementById(id).oninput=e=>{
+    if(!current) return; current[id==='sc'?'scale':id]=parseFloat(e.target.value)||0; apply(current); updateUI();
   }
 });
 
-// 家具（SVGスプライト）
-const SPR=[{w:1.8,h:0.8,svg:'<svg xmlns="http://www.w3.org/2000/svg" width="240" height="160"><rect x="10" y="20" rx="16" ry="16" width="220" height="120" fill="#5187ff"/><rect x="20" y="60" rx="8" ry="8" width="90" height="60" fill="#0003"/><rect x="130" y="60" rx="8" ry="8" width="90" height="60" fill="#0003"/></svg>'},
-{w:1.2,h:0.6,svg:'<svg xmlns="http://www.w3.org/2000/svg" width="200" height="120"><rect x="8" y="8" rx="14" ry="14" width="184" height="104" fill="#a9784a"/></svg>'},
-{w:0.6,h:0.6,svg:'<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><circle cx="70" cy="70" r="64" fill="#36a16a"/></svg>'},
-{w:2.0,h:0.9,svg:'<svg xmlns="http://www.w3.org/2000/svg" width="260" height="160"><rect x="6" y="6" rx="14" ry="14" width="248" height="148" fill="#7d8fb1"/><rect x="20" y="20" width="220" height="120" rx="8" ry="8" fill="#fff8"/></svg>'}];
-function addSprite(def,x,y){ const d=document.createElement('div'); d.className='sprite'; const img=new Image(); img.src='data:image/svg+xml;base64,'+btoa(def.svg); d.appendChild(img);
-  const ppm=pxPerM||120, W=Math.max(40,def.w*ppm), H=Math.max(40,def.h*ppm); d.style.width=W+'px'; d.style.height=H+'px';
-  d.style.left=(x||10)+'px'; d.style.top=(y||10)+'px'; stage.appendChild(d);
-  let drag=false,sx=0,sy=0,sl=0,st=0; d.addEventListener('pointerdown',ev=>{drag=true;d.setPointerCapture(ev.pointerId);sx=ev.clientX;sy=ev.clientY;sl=parseFloat(d.style.left);st=parseFloat(d.style.top);});
-  d.addEventListener('pointermove',ev=>{if(!drag)return;const nl=sl+(ev.clientX-sx), nt=st+(ev.clientY-sy); const maxL=stage.clientWidth-d.clientWidth, maxT=stage.clientHeight-d.clientHeight;
-    d.style.left=Math.max(0,Math.min(nl,maxL))+'px'; d.style.top=Math.max(0,Math.min(nt,maxT))+'px';});
-  d.addEventListener('pointerup',ev=>{drag=false;d.releasePointerCapture(ev.pointerId);});
-  d.addEventListener('dblclick',()=>d.remove());
-}
-document.getElementById('auto').onclick=()=>{ const H=stage.clientHeight; let x=10; SPR.forEach(s=>{ addSprite(s,x, H*0.65+8 ); x+= (stage.clientWidth/SPR.length); }); };
-document.getElementById('clr').onclick=()=>{ stage.querySelectorAll('.sprite').forEach(n=>n.remove()); };
-
-/* ===== 騒音 ===== */
-const spec=document.getElementById('spec'), wave=document.getElementById('wave'); const sctx=spec.getContext('2d'), wctx=wave.getContext('2d');
-function ticks(maxHz){ const yt=document.getElementById('yt'); yt.innerHTML=''; for(let i=0;i<=6;i++){ const d=document.createElement('div'); const f=Math.round((1-i/6)*maxHz); d.textContent=(f>=1000?(f/1000).toFixed(1)+'k':f)+'Hz'; yt.appendChild(d); } }
-ticks(parseInt(document.getElementById('fmax').value)); document.getElementById('fmax').oninput=e=>ticks(parseInt(e.target.value));
-let aCtx=null, an=null, raf=null;
-document.getElementById('mOn').onclick=async()=>{ try{
-  const st=await navigator.mediaDevices.getUserMedia({audio:true}); aCtx=new (window.AudioContext||window.webkitAudioContext)(); an=aCtx.createAnalyser(); an.fftSize=2048; an.smoothingTimeConstant=0.7; aCtx.createMediaStreamSource(st).connect(an);
-  const f=new Uint8Array(an.frequencyBinCount), t=new Uint8Array(an.fftSize);
-  (function loop(){ raf=requestAnimationFrame(loop);
-    const maxHz=parseFloat(document.getElementById('fmax').value), dbMin=parseFloat(document.getElementById('dbMin').value);
-    an.getByteFrequencyData(f);
-    // スペクトログラムを左へシフト
-    const W=spec.width,H=spec.height; const img=sctx.getImageData(1,0,W-1,H); sctx.putImageData(img,0,0);
-    for(let y=0;y<H;y++){ const bin=Math.floor((y/H)*(maxHz/(aCtx.sampleRate/2))*f.length); const v=f[bin]||0;
-      const norm=Math.max(0,Math.min(1,(v-(-dbMin))/255)); // レンジ調整
-      // 青→赤の簡易LUT
-      const r=Math.floor(255*norm), g=Math.floor(255*Math.min(1,Math.max(0,2*norm-0.2))), b=Math.floor(255*(1-norm));
-      sctx.fillStyle=`rgb(${r},${g},${b})`; sctx.fillRect(W-1,H-1-y,1,1);
-    }
-    // 波形
-    an.getByteTimeDomainData(t); wctx.fillStyle='#000'; wctx.fillRect(0,0,wave.width,wave.height); wctx.strokeStyle='#57caff'; wctx.beginPath();
-    for(let i=0;i<t.length;i++){ const x=i/t.length*wave.width, y=(t[i]/255)*wave.height; if(i==0) wctx.moveTo(x,y); else wctx.lineTo(x,y);} wctx.stroke();
-    let mn=255,mx=0,sum=0; for(const v of t){ if(v<mn)mn=v; if(v>mx)mx=v; sum+=v; } document.getElementById('stats').textContent=`最小:${mn} 最大:${mx} 平均:${(sum/t.length).toFixed(1)}`;
-  })();
-}catch(e){ alert('マイク失敗: '+e.message); }};
-document.getElementById('mOff').onclick=()=>{ if(raf) cancelAnimationFrame(raf); if(aCtx) aCtx.close(); };
-
-/* ===== 間取り ===== */
-const rooms=[]; function refR(){ const tb=document.getElementById('rt'); tb.innerHTML=''; rooms.forEach((r,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i+1}</td><td>${r.w.toFixed(2)}</td><td>${r.d.toFixed(2)}</td><td>${(r.w*r.d).toFixed(2)}</td>`; tb.appendChild(tr); }); }
-document.getElementById('addR').onclick=()=>{ rooms.push({w:+document.getElementById('mw').value||0, d:+document.getElementById('md').value||0}); refR(); };
-document.getElementById('clrR').onclick=()=>{ rooms.length=0; refR(); };
-
-/* ===== 土地値比率 ===== */
-document.getElementById('gps').onclick=()=>{ if(!navigator.geolocation) return alert('未対応'); navigator.geolocation.getCurrentPosition(p=>{ document.getElementById('gout').textContent=`緯度:${p.coords.latitude.toFixed(6)} 経度:${p.coords.longitude.toFixed(6)}`; },e=>alert('GPS失敗:'+e.message)); };
-document.getElementById('avg3').onclick=()=>{ const a=+document.getElementById('ros').value||0, b=+document.getElementById('koj').value||0, c=+document.getElementById('nb').value||0;
-  const arr=[a,b,c].filter(v=>v>0); if(!arr.length) return alert('数値を入れてください'); const avg=arr.reduce((x,y)=>x+y)/arr.length;
-  document.getElementById('avgOut').textContent='3点平均: '+avg.toFixed(1)+' 千円/㎡';
-  const price=+document.getElementById('pri').value||0, area=+document.getElementById('area').value||0;
-  if(price>0 && area>0){ const landV=avg*area/1000; document.getElementById('ratio').textContent='土地値比率: '+((landV/price)*100).toFixed(1)+'%'; }
+// 便利：背景ズーム
+document.getElementById('zoom').oninput=e=>{
+  const z=parseFloat(e.target.value); stage.style.transform=`scale(${z})`; ov.style.transform=`scale(${z})`; wrap.style.height=(ov.height*z)+'px';
 };
 
-/* ===== DSCR ===== */
-function fixedSum(){ return ['fc1','fc2','fc3','fc4','fc5'].map(id=>+document.getElementById(id).value||0).reduce((a,b)=>a+b,0); }
-['fc1','fc2','fc3','fc4','fc5'].forEach(id=>document.getElementById(id).addEventListener('input',()=>{ document.getElementById('fcSum').textContent='固定費合計: '+fixedSum().toLocaleString(); }));
-document.getElementById('opxP').onchange=e=>{ document.getElementById('opex').value=e.target.value; };
-document.getElementById('calc').onclick=()=>{ const rent=+document.getElementById('rent').value||0, occ=+document.getElementById('occ').value||0, opex=+document.getElementById('opex').value||0, fixed=fixedSum();
-  const eg=rent*12*occ; const noi=eg*(1-opex)-fixed;
-  const L=+document.getElementById('loan').value||0, r=+document.getElementById('rate').value||0, Y=+document.getElementById('yrs').value||0, m=r/12, n=Y*12;
-  const pmt=(m===0)?L/n: L*m*Math.pow(1+m,n)/(Math.pow(1+m,n)-1); const annual=pmt*12; const dscr=noi/annual;
-  document.getElementById('noi').textContent='NOI: '+Math.round(noi).toLocaleString(); document.getElementById('debt').textContent='年返済: '+Math.round(annual).toLocaleString(); document.getElementById('dscr').textContent='DSCR: '+(isFinite(dscr)?dscr.toFixed(2):'-'); };
+// 自動配置（初期角度提案：床スナップ＆微ピッチ）
+document.getElementById('auto').onclick=()=>{
+  if(gal.children.length===0) return alert('家具画像を追加してください');
+  const W=ov.width, H=ov.height, y=H*0.74; const imgs=[...gal.children];
+  const picks=[imgs[0]||imgs.at(-1), imgs[1]||imgs.at(-1), imgs[2]||imgs.at(-1)];
+  const pos=[0.28,0.52,0.75];
+  picks.forEach((t,i)=>{
+    const im=new Image(); im.src=t.src; im.onload=()=>{ const s=addSprite(im,[1.8,1.2,0.6][i], W*pos[i], y);
+      s.yaw= snapYaw(s.yaw); s.pitch=-5; s.roll=0; apply(s); syncUI(s);
+    }
+  });
+};
+function snapYaw(y){ // 0/90/180/270に吸着
+  const a=((y%360)+360)%360; const snaps=[0,90,180,270]; let best=0,err=999;
+  snaps.forEach(n=>{const d=Math.abs(a-n); if(d<err){err=d;best=n}})
+  return (a<best?y-(a-best):y+(best-a));
+}
+document.getElementById('clear').onclick=()=>{ sprites.forEach(removeSprite); };
 
-/* ===== チェック ===== */
-const CK=['外壁/屋根雨漏り','室内壁天井','床(沈み/傷/鳴り)','水回り(キ/浴/洗/ト)','窓/建具/鍵','配管/給湯/電気','バルコニー/共用','騒音/臭気/近隣','日照/通風','その他'];
-function addC(){ const tb=document.getElementById('ct'); const tr=document.createElement('tr'); tr.innerHTML=`<td>${CK[(tb.children.length)%CK.length]}</td>
-<td><select class="inp"><option>良</option><option>可</option><option>注意</option><option>要修繕</option></select></td>
-<td><input class="inp" type="number" value="0" style="wi
+/* ---------- 共通ユーティリティ ---------- */
+function pt(e){ const r=wrap.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top} }
+function ctr(el){ const r=el.getBoundingClientRect(), p=wrap.getBoundingClientRect(); return {x:(r.left+r.right)/2-p.left, y:(r.top+r.bottom)/2-p.top} }
+function angle(a,b){ return Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI }
+
+/* ---------- 初期状態：オーバーレイは常に無効／監視 ---------- */
+overlayGuard.off();
+setInterval(()=>{ // 監視：もし有効のままなら自動無効化
+  if(ov.style.pointerEvents!=='none' && !picking) overlayGuard.off();
+}, 1200);
+</script>
+</body></html>
