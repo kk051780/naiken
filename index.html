@@ -1,173 +1,437 @@
-<!doctype html><html lang="ja"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
-<title>内見ユーティリティ（v7.4.2 クリック貫通ホットフィックス）</title>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>内見ユーティリティ（全部入り v8.0 単一HTML）</title>
 <style>
-:root{--bg:#0f1928;--panel:#10243d;--ink:#e9f3ff;--mut:#9ab0ca;--accent:#43b5ff}
-*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,Roboto,"Noto Sans JP",sans-serif}
-header{position:sticky;top:0;z-index:10000;background:rgba(15,25,40,.95);backdrop-filter:blur(6px);border-bottom:1px solid #2a3f5b;padding:10px 12px}
-h1{font-size:18px;margin:0}
-nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.tab,.btn{position:relative;z-index:10000}
-.tab{padding:8px 12px;border:1px solid #2b4a6b;border-radius:10px;background:#142a46;color:#def;cursor:pointer}
-.tab.active{background:var(--accent);color:#001428;border-color:#59ccff;font-weight:700}
-main{padding:12px}
-.panel{display:none;background:var(--panel);border:1px solid #274563;border-radius:12px;padding:12px}
-.panel.active{display:block}
-.btn,select,.inp{background:#0f2036;border:1px solid #2b4666;color:var(--ink);padding:10px 12px;border-radius:10px}
-.btn.primary{background:var(--accent);color:#001428;border-color:#6dd0ff;font-weight:700}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0}
-.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#173256;border:1px solid #2a4a6b;font-size:12px}
-.small{font-size:12px;color:var(--mut)}
-#stageWrap{position:relative;border:1px solid #294463;border-radius:12px;overflow:hidden;max-width:960px;margin:auto;background:#000}
-#photo{display:block;width:100%;height:auto;pointer-events:none}
-#videoPreview{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:5;display:none;background:#000;pointer-events:none}
-#liveBadge{position:absolute;left:8px;top:8px;z-index:8;background:#e53;color:#fff;padding:4px 8px;border-radius:8px;font-weight:700;display:none}
-#overlay{position:absolute;inset:0;z-index:7;pointer-events:none}
-.sprite{position:absolute;left:0;top:0;transform-origin:center center;touch-action:none;user-select:none}
-.sprite .hit,.sprite .handle{position:absolute;inset:0;border:2px solid transparent;border-radius:12px;pointer-events:auto}
-.sprite .handle{inset:auto;right:-16px;bottom:-16px;width:28px;height:28px;border-radius:50%;background:var(--accent);border:2px solid #062238;display:flex;align-items:center;justify-content:center;color:#062238;font-weight:800}
-.sprite.selected .hit{border-color:var(--accent)}
-.gallery{display:flex;gap:8px;overflow:auto;padding:8px;background:#0c1c30;border-radius:10px;border:1px solid #263f5f}
-.gallery .card{display:flex;align-items:center;gap:8px;background:#11233a;border:1px solid #244363;border-radius:12px;padding:8px 10px;cursor:pointer;white-space:nowrap}
-.controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:#102a45;border:1px solid #28476a;border-radius:12px;padding:10px;margin-top:10px}
-.range input[type=range]{width:180px}
+:root{
+  --bg:#0f1a2b; --panel:#12213a; --ink:#e9f1ff; --muted:#9fb3d8;
+  --accent:#36c; --accent2:#21b6a8; --danger:#e24; --ok:#2ac06d;
+  --card:#0b1526; --btn:#1b2c4a;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif}
+h1{font-size:18px;margin:12px 12px 0}
+small{color:var(--muted)}
+.container{padding:8px 12px 100px}
+.tabs{position:sticky;top:0;z-index:50;background:linear-gradient(#0f1a2b,#0f1a2bCC 70%,#0f1a2b00)}
+.tabs .row{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px 8px}
+.btn{background:var(--btn);color:var(--ink);border:1px solid #2c415f;border-radius:12px;padding:10px 14px;font-weight:600}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent)}
+.btn.good{background:var(--ok)}
+.btn.warn{background:var(--danger)}
+.grid{display:grid;gap:10px}
+.panel{background:var(--panel);border:1px solid #20324f;border-radius:14px;padding:12px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+label{font-size:13px;color:var(--muted)}
+input,select,textarea{background:#0c1628;color:var(--ink);border:1px solid #20324f;border-radius:10px;padding:10px}
+input[type=number]{width:120px}
+input[type=range]{width:200px}
+.badge{display:inline-block;padding:3px 8px;border-radius:999px;background:#213556;color:#bcd}
+.canvasWrap{position:relative;overflow:hidden;border-radius:12px;border:1px solid #2a3d5f;background:#000}
+video,canvas.img{display:block;width:100%;height:auto}
+.fabShot{position:absolute;right:10px;bottom:10px;z-index:30;background:#0008;border:1px solid #fff3;border-radius:12px;padding:10px 12px}
+.overlayGuard{position:absolute;inset:0;z-index:20;display:none}
+.overlayGuard.on{display:block;background:#0000;pointer-events:auto}
+.furniture{position:absolute;left:40px;top:40px;width:160px;user-select:none;touch-action:none;transform-origin:center}
+.furniture.dragging{outline:2px dashed #7cf}
+.handle{position:absolute;right:-10px;bottom:-10px;width:24px;height:24px;border-radius:50%;background:#36c;border:2px solid #fff}
+.kpi{display:flex;gap:8px;flex-wrap:wrap}
+.kpi .chip{background:#0a1430;border:1px solid #1f3259;border-radius:10px;padding:6px 10px}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border-bottom:1px solid #24385d;padding:8px 6px}
+footer{position:sticky;bottom:0;background:linear-gradient(#0f1a2b00,#0f1a2bE6 30%,#0f1a2b);padding:10px 12px;z-index:40}
+hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
+.hidden{display:none}
 </style>
 </head>
 <body>
-<header>
-  <h1>内見ユーティリティ（v7.4.2）</h1>
-  <nav id="tabs"></nav>
-</header>
+<h1>内見ユーティリティ（全部入り v8.0） <small id="ua"></small></h1>
 
-<main>
-  <!-- ステージング -->
-  <section id="p-stg" class="panel active">
-    <div class="row">
-      <button class="btn" id="cam">カメラ起動</button>
-      <button class="btn" id="shot" disabled>撮影</button>
-      <label class="btn"><input id="pick" type="file" accept="image/*" hidden>写真を選ぶ</label>
-      <button class="btn" id="auto">家具 自動配置</button>
-      <button class="btn" id="clr">家具 クリア</button>
-      <span id="scaleBadge" class="badge">スケール未設定</span>
-      <button class="btn" id="panic">オーバーレイ強制OFF</button>
-    </div>
-    <div class="row">
-      <label>基準長さ(m) <input id="baseM" class="inp" type="number" step="0.01" value="2.0"></label>
-      <button class="btn" id="two">確定（基準2点）</button>
-      <div class="controls">
-        <div class="range">Yaw <input id="yaw" type="range" min="-180" max="180" value="0"><span id="yvw" class="badge">0°</span></div>
-        <div class="range">Pitch <input id="pitch" type="range" min="-80" max="80" value="0"><span id="pvw" class="badge">0°</span></div>
-        <div class="range">Roll <input id="roll" type="range" min="-180" max="180" value="0"><span id="rvw" class="badge">0°</span></div>
-        <div class="range">スケール <input id="sc" type="range" min="0.2" max="3" step="0.01" value="1"><span id="svw" class="badge">1.00×</span></div>
-        <div class="range">ズーム <input id="zoom" type="range" min="0.6" max="2.4" step="0.01" value="1"></div>
-      </div>
-    </div>
+<div class="tabs">
+  <div class="row">
+    <button class="btn primary" data-tab="staging">ステージング</button>
+    <button class="btn" data-tab="measure">間取り・実寸</button>
+    <button class="btn" data-tab="noise">騒音</button>
+    <button class="btn" data-tab="land">物件情報/土地値比率</button>
+    <button class="btn" data-tab="dscr">収支/DSCR</button>
+    <button class="btn" data-tab="check">チェック</button>
+    <button class="btn" data-tab="save">保存/レポート</button>
+  </div>
+</div>
 
-    <div id="stageWrap">
-      <span id="liveBadge">LIVE</span>
-      <img id="photo" alt="背景">
-      <video id="videoPreview" playsinline muted></video>
-      <canvas id="overlay"></canvas>
-    </div>
+<div class="container grid">
 
-    <h3 style="margin:14px 0 6px">家具ギャラリー</h3>
-    <div class="row">
-      <label class="btn"><input id="furnAdd" type="file" accept="image/*" multiple hidden>家具画像を追加</label>
-    </div>
-    <div id="gal" class="gallery"></div>
-  </section>
+<!-- ======== ステージング ======== -->
+<section id="staging" class="panel">
+  <div class="row">
+    <button class="btn" id="camStart">カメラ起動</button>
+    <button class="btn" id="shot">撮影</button>
+    <label> or </label>
+    <label class="btn"><input type="file" id="pickPhoto" accept="image/*" capture="environment" class="hidden">写真を選ぶ</label>
+    <button class="btn" id="autoPlace">家具 自動配置</button>
+    <button class="btn" id="clearFurniture">家具 クリア</button>
+    <span class="badge" id="scaleBadge">スケール未設定</span>
+  </div>
 
-  <!-- 予備パネル（必要に応じて） -->
-  <section id="p-sav" class="panel"><div class="row">
-    <button class="btn" id="saveH">この画面をHTML保存</button>
-    <a id="dl" class="btn" download="naiken_v742.html" style="display:none">ダウンロード</a>
-  </div></section>
-</main>
+  <div class="row">
+    <label>基準長さ(m)</label><input type="number" id="baseLen" min="0.1" step="0.1" value="2.0">
+    <button class="btn" id="set2pt">確定（基準2点）</button>
+    <label>Yaw</label><input type="range" id="yaw" min="-180" max="180" value="0">
+    <label>Pitch</label><input type="range" id="pitch" min="-45" max="45" value="0">
+    <label>Roll</label><input type="range" id="roll" min="-45" max="45" value="0">
+    <label>ズーム</label><input type="range" id="zoom" min="0.5" max="2" value="1" step="0.01">
+  </div>
+
+  <div class="canvasWrap" id="stageWrap">
+    <video id="video" playsinline class="hidden"></video>
+    <canvas id="stage" class="img"></canvas>
+    <div class="overlayGuard" id="guard"></div>
+    <button class="fabShot btn" id="shotMini">撮影</button>
+  </div>
+
+  <div class="row">
+    <label>スタイル</label>
+    <select id="styleSel">
+      <option>単身男性/ミニマル</option>
+      <option>ナチュラル/北欧</option>
+      <option>ホテルライク</option>
+    </select>
+    <button class="btn" id="addSofa">ソファ追加</button>
+    <button class="btn" id="addTable">テーブル追加</button>
+    <button class="btn" id="addPlant">観葉追加</button>
+  </div>
+  <small>使い方: カメラ起動→撮影 or 写真選択。<b>確定（基準2点）</b>で画像上の2点をクリック→「基準長さ(m)」に合わせて実寸スケール化。家具はドラッグ/ピンチ、角丸ハンドルで回転。ダブルタップで削除。</small>
+</section>
+
+<!-- ======== 計測 ======== -->
+<section id="measure" class="panel hidden">
+  <div class="row">
+    <button class="btn" id="mUseStage">ステージ画像を使う</button>
+    <label>㎡単価(円)</label><input type="number" id="unitPrice" value="1200" step="100">
+    <button class="btn" id="mAddRect">矩形を追加</button>
+    <button class="btn" id="mClear">クリア</button>
+  </div>
+  <div class="canvasWrap">
+    <canvas id="mCanvas" class="img"></canvas>
+  </div>
+  <div class="kpi" id="mKpi"></div>
+</section>
+
+<!-- ======== 騒音 ======== -->
+<section id="noise" class="panel hidden">
+  <div class="row">
+    <button class="btn" id="micStart">マイク計測開始</button>
+    <button class="btn" id="micStop">停止</button>
+    <label>Yレンジ(dB)</label><input type="range" id="dbRange" min="20" max="100" value="60">
+    <label>窓長(s)</label><input type="range" id="winSec" min="1" max="8" value="4">
+  </div>
+  <div class="kpi">
+    <div class="chip" id="minDb">最小:-</div>
+    <div class="chip" id="maxDb">最大:-</div>
+    <div class="chip" id="avgDb">平均:-</div>
+  </div>
+  <div class="canvasWrap"><canvas id="wave" height="120"></canvas></div>
+  <h4>FFTスペクトログラム（時間×周波数、色=レベル）</h4>
+  <div class="canvasWrap"><canvas id="spec" height="240"></canvas></div>
+  <small>※簡易表示（SPL相当・相対値）。HTTPS/許可必須。</small>
+</section>
+
+<!-- ======== 土地値 ======== -->
+<section id="land" class="panel hidden">
+  <div class="row">
+    <label>物件価格(万円)</label><input type="number" id="priceM" value="1980" step="10">
+    <label>土地面積(m²)</label><input type="number" id="landArea" value="100" step="0.1">
+  </div>
+  <div class="row">
+    <button class="btn" id="gps">GPSで座標</button>
+    <input id="addr" placeholder="住所（任意）" style="min-width:240px">
+    <span id="latlng" class="badge">緯度: - / 経度: -</span>
+  </div>
+  <div class="row">
+    <label>路線価(千円/m²)</label><input type="number" id="rosen" step="1">
+    <label>公示価格(千円/m²)</label><input type="number" id="koji" step="1">
+    <label>近傍成約(千円/m²)</label><input type="number" id="deal" step="1">
+    <button class="btn" id="avg3">3点平均を計算</button>
+  </div>
+  <div class="kpi" id="landKpi"></div>
+  <small>メモ: 自動取得はCORS制限により単体HTMLでは不可の場合があります。値を入力して算出してください。オンライン完全版は /proxy でサーバ取得。</small>
+</section>
+
+<!-- ======== DSCR ======== -->
+<section id="dscr" class="panel hidden">
+  <div class="row">
+    <label>月額家賃(円)</label><input type="number" id="rent" value="70000" step="1000">
+    <label>稼働率</label><input type="number" id="occ" value="0.95" step="0.01">
+  </div>
+  <div class="row">
+    <label>経費率</label><input type="number" id="opex" value="0.25" step="0.01">
+    <select id="agePreset">
+      <option value="">築年数プリセット</option>
+      <option value="0.18">～5年(0.18)</option>
+      <option value="0.22">6-15年(0.22)</option>
+      <option value="0.28">16-30年(0.28)</option>
+      <option value="0.33">31年以上(0.33)</option>
+    </select>
+    <label>固定費(年,円)</label><input type="number" id="fixed" value="120000" step="10000">
+  </div>
+  <div class="row">
+    <label>借入額(円)</label><input type="number" id="loan" value="15000000" step="100000">
+    <label>金利</label><input type="number" id="rate" value="0.02" step="0.001">
+    <label>返済年数</label><input type="number" id="years" value="30">
+  </div>
+  <div class="kpi" id="dscrKpi"></div>
+</section>
+
+<!-- ======== 内見チェック ======== -->
+<section id="check" class="panel hidden">
+  <div class="row"><button class="btn" id="addItem">項目を追加</button>
+    <select id="presetC">
+      <option value="">テンプレを挿入</option>
+      <option>外壁・屋根雨漏り</option><option>室内壁天井</option><option>床/床鳴り</option>
+      <option>水回り(キッチン/浴室/洗面/トイレ)</option><option>建具/サッシ</option><option>電気/換気</option>
+    </select>
+  </div>
+  <table class="table" id="tbl">
+    <thead><tr><th>項目</th><th>判定</th><th>数量</th><th>単位</th><th>単価(円)</th><th>概算</th><th>写真/動画</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div class="kpi" id="chkKpi"></div>
+</section>
+
+<!-- ======== 保存 ======== -->
+<section id="save" class="panel hidden">
+  <div class="row">
+    <button class="btn good" id="saveHtml">この状態で単体HTML保存</button>
+    <span class="badge">ブラウザによりダウンロード名が変わる場合があります</span>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <small>© 内見ユーティリティ 単一HTML v8.0 — 操作不能や機能欠落の再発防止はキャンバスの「設計方針・再発防止・FMEA v2」を参照</small>
+</footer>
 
 <script>
-/* ===== タブ ===== */
-const T=[['stg','ステージング'],['sav','保存']];
-const tabs=document.getElementById('tabs');
-T.forEach((t,i)=>{const b=document.createElement('button'); b.className='tab'+(i?'' :' active'); b.textContent=t[1];
-b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); b.classList.add('active');
-document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active')); document.getElementById('p-'+t[0]).classList.add('active');};
-tabs.appendChild(b);});
-
-/* ===== ステージング ===== */
-const stageWrap=document.getElementById('stageWrap'), photo=document.getElementById('photo'), overlay=document.getElementById('overlay');
-const video=document.getElementById('videoPreview'), liveBadge=document.getElementById('liveBadge');
-let stream=null, ppm=null;
-
-/* クリック貫通 再発防止 */
-function overlayOff(){ overlay.style.pointerEvents='none'; }
-const overlayGuard={timer:null,on(){ overlay.style.pointerEvents='auto'; clearTimeout(this.timer); this.timer=setTimeout(()=>overlayOff(),2000); }};
-document.getElementById('panic').onclick=overlayOff;
-
-// どのクリックでもオーバーレイがONなら即OFF（安全網）
-['click','pointerdown','touchstart'].forEach(ev=>{
-  document.addEventListener(ev,()=>{ if(overlay.style.pointerEvents==='auto' && !overlay.dataset.pick){ overlayOff(); } },{capture:true,passive:true});
+// ====== 共通UI ======
+const qs = s=>document.querySelector(s);
+const qsa = s=>[...document.querySelectorAll(s)];
+qs('#ua').textContent = navigator.userAgent;
+qsa('[data-tab]').forEach(b=>b.onclick=()=>{
+  const t=b.dataset.tab; qsa('section').forEach(s=>s.classList.add('hidden'));
+  qs('#'+t).classList.remove('hidden');
+  qsa('[data-tab]').forEach(x=>x.classList.remove('primary')); b.classList.add('primary');
 });
 
-function fitTo(img){ const w=Math.min(stageWrap.clientWidth, img.naturalWidth||1280); const r=(img.naturalWidth||1280)/(img.naturalHeight||720); const h=w/r;
-  photo.width=w; overlay.width=w; photo.height=h; overlay.height=h; stageWrap.style.height=h+'px'; }
-
-document.getElementById('cam').onclick=async()=>{
-  try{
-    if(stream) return;
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-    video.srcObject=stream; video.style.display='block'; liveBadge.style.display='inline-block'; await video.play();
-    // 背景サイズだけ合わせる
-    const tmp={naturalWidth: video.videoWidth||1280, naturalHeight: video.videoHeight||720}; fitTo(tmp);
-    document.getElementById('shot').disabled=false;
-  }catch(e){ alert('カメラ失敗: '+e.message) }
-};
-function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } video.pause(); video.srcObject=null; video.style.display='none'; liveBadge.style.display='none'; document.getElementById('shot').disabled=true; }
-
-document.getElementById('shot').onclick=()=>{ if(!stream) return alert('先にカメラ起動');
-  const c=document.createElement('canvas'); const w=video.videoWidth||1280, h=video.videoHeight||720;
-  c.width=w; c.height=h; c.getContext('2d').drawImage(video,0,0,w,h); photo.src=c.toDataURL('image/jpeg',0.92); stopCam(); setTimeout(()=>fitTo(photo),0);
-};
-document.getElementById('pick').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const url=URL.createObjectURL(f); photo.onload=()=>fitTo(photo); photo.src=url; stopCam(); };
-
-/* 基準2点 */
-document.getElementById('two').onclick=()=>{ if(!photo.src) return alert('先に画像'); overlayGuard.on(); overlay.getContext('2d').clearRect(0,0,overlay.width,overlay.height); overlay.dataset.pick='1'; document.getElementById('scaleBadge').textContent='基準点を2つクリック'; };
-overlay.addEventListener('click',e=>{
-  if(overlay.style.pointerEvents!=='auto') return;
-  const r=overlay.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top; const cx=overlay.getContext('2d');
-  cx.fillStyle='#ffd54a'; cx.beginPath(); cx.arc(x,y,6,0,Math.PI*2); cx.fill();
-  if(overlay.dataset.pick==='1'){ overlay.dataset.x1=x; overlay.dataset.y1=y; overlay.dataset.pick='2'; overlayGuard.on(); }
-  else { const x1=+overlay.dataset.x1, y1=+overlay.dataset.y1; const d=Math.hypot(x-x1,y-y1); const m=parseFloat(document.getElementById('baseM').value||'1'); ppm=d/m;
-    overlayOff(); overlay.removeAttribute('data-pick'); document.getElementById('scaleBadge').textContent='スケール: '+ppm.toFixed(1)+' px/m';
-    cx.beginPath(); cx.moveTo(x1,y1); cx.lineTo(x,y); cx.strokeStyle='#ffd54a'; cx.lineWidth=3; cx.stroke(); setTimeout(()=>cx.clearRect(0,0,overlay.width,overlay.height),800);
-  }
-});
-
-/* 家具 */
-const gal=document.getElementById('gal'); let sprites=[], current=null;
-document.getElementById('furnAdd').onchange=e=>{
-  const fs=[...e.target.files]; if(!fs.length) return;
-  const card=document.createElement('div'); card.className='card'; card.textContent='画像×'+fs.length; gal.appendChild(card);
-  card.onclick=()=>{ const img=new Image(); img.onload=()=>addSprite(img, stageWrap.clientWidth*0.5, stageWrap.clientHeight*0.75); img.src=URL.createObjectURL(fs[0]); };
-};
-function addSprite(image,x,y){
-  const el=document.createElement('div'); el.className='sprite'; el.style.left=(x||30)+'px'; el.style.top=(y||30)+'px'; el.style.width='200px'; el.style.height='140px';
-  el.style.background=`center/contain no-repeat url(${image.src})`; el.innerHTML='<div class="hit"></div><div class="handle">⤮</div>'; stageWrap.appendChild(el);
-  const s={el,x:x||30,y:y||30,scale: ppm? (1.8*ppm)/(image.width||200):0.6,roll:0}; sprites.push(s); select(s); apply(s);
-  const hit=el.querySelector('.hit'); hit.addEventListener('pointerdown',ev=>{ev.preventDefault(); select(s); const p0=pt(ev), sx=s.x, sy=s.y; const mv=e=>{ const p=pt(e); s.x=sx+(p.x-p0.x); s.y=sy+(p.y-p0.y); apply(s) }; const up=()=>window.removeEventListener('pointermove',mv); window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up,{once:true}); });
-  el.querySelector('.handle').addEventListener('pointerdown',ev=>{ev.preventDefault(); const c=ctr(el); const a0=ang(c,pt(ev)), r0=s.roll; const mv=e=>{ s.roll=r0+(ang(c,pt(e))-a0); apply(s) }; const up=()=>window.removeEventListener('pointermove',mv); window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up,{once:true}); });
-  let last=0; hit.addEventListener('click',e=>{ const t=Date.now(); if(t-last<300){ removeSprite(s) } last=t });
+// ====== ステージング ======
+const video = qs('#video'), stage = qs('#stage'), ctx = stage.getContext('2d');
+const guard = qs('#guard'); let stream=null, imgBitmap=null, scalePPM=null, p1=null,p2=null;
+function fitCanvas(imgW,imgH){
+  const w=stage.parentElement.clientWidth; const h = Math.round(imgH * w / imgW);
+  stage.width=w; stage.height=h;
 }
-function removeSprite(s){ s.el.remove(); const i=sprites.indexOf(s); if(i>=0) sprites.splice(i,1); if(current===s) select(null); }
-function select(s){ sprites.forEach(x=>x.el.classList.remove('selected')); current=s; if(s) s.el.classList.add('selected'); }
-function apply(s){ s.el.style.left=s.x+'px'; s.el.style.top=s.y+'px'; s.el.style.transform=`translate(-50%,-50%) rotate(${s.roll}deg) scale(${s.scale})`; }
-function pt(e){ const r=stageWrap.getBoundingClientRect(); return {x:e.clientX-r.left,y:e.clientY-r.top}; }
-function ctr(el){ const r=el.getBoundingClientRect(), p=stageWrap.getBoundingClientRect(); return {x:(r.left+r.right)/2-p.left, y:(r.top+r.bottom)/2-p.top}; }
-function ang(a,b){ return Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI }
+async function drawBase(){
+  if(!imgBitmap) return;
+  fitCanvas(imgBitmap.width,imgBitmap.height);
+  ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,stage.width,stage.height);
+  // transforms
+  const yaw = +qs('#yaw').value * Math.PI/180;
+  const pitch = +qs('#pitch').value * Math.PI/180;
+  const roll = +qs('#roll').value * Math.PI/180;
+  const zoom = +qs('#zoom').value;
+  ctx.translate(stage.width/2, stage.height/2);
+  ctx.scale(zoom,zoom);
+  ctx.rotate(roll);
+  // 近似：Yaw/Pitchはスケール比で疑似表現（単体HTMLでの簡易対応）
+  ctx.transform(1, Math.tan(pitch)/8, Math.tan(yaw)/8, 1, 0, 0);
+  ctx.translate(-stage.width/2, -stage.height/2);
+  ctx.drawImage(imgBitmap,0,0,stage.width,stage.height);
+  // 基準点の可視化
+  if(p1&&p2){
+    ctx.fillStyle="#ffc400"; ctx.strokeStyle="#ffc400"; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+    ctx.beginPath(); ctx.arc(p1.x,p1.y,6,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(p2.x,p2.y,6,0,Math.PI*2); ctx.fill();
+  }
+}
+async function usePhoto(file){
+  imgBitmap = await createImageBitmap(file);
+  drawBase();
+}
+qs('#pickPhoto').onchange=e=>{const f=e.target.files[0]; if(f) usePhoto(f)};
+qs('#camStart').onclick=async()=>{
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}, audio:false});
+    video.srcObject = stream; await video.play(); video.classList.remove('hidden');
+    // draw from video frame to canvas
+    const raf=()=>{
+      if(!video.srcObject) return;
+      createImageBitmap(video).then(bm=>{imgBitmap=bm; drawBase()});
+      requestAnimationFrame(raf);
+    }; raf();
+  }catch(err){alert('カメラ起動失敗: '+err.message)}
+};
+function snap(){
+  if(!imgBitmap){alert('先にカメラ起動/写真選択'); return;}
+  drawBase(); // 最新を描画
+}
+qs('#shot').onclick = snap; qs('#shotMini').onclick = snap;
 
-/* 保存 */
-document.getElementById('saveH').onclick=()=>{ const blob=new Blob([document.documentElement.outerHTML],{type:'text/html'}); const url=URL.createObjectURL(blob); const a=document.getElementById('dl'); a.href=url; a.style.display='inline-block'; };
+// 家具スプライト（角度は今は同一画像。360°は差し替えで拡張）
+function addFurniture(type){
+  const div = document.createElement('img');
+  div.src = type==='sofa' ? 'data:image/svg+xml;utf8,'+encodeURIComponent(sofaSvg()) :
+           type==='table'? 'data:image/svg+xml;utf8,'+encodeURIComponent(tableSvg()) :
+                           'data:image/svg+xml;utf8,'+encodeURIComponent(plantSvg());
+  div.className='furniture'; div.style.left='20px'; div.style.top='20px';
+  let sx=0, sy=0, left=20, top=20, scale=1, rot=0;
+  const onPointerDown=e=>{
+    div.classList.add('dragging'); sx=e.clientX; sy=e.clientY; left=parseFloat(div.style.left); top=parseFloat(div.style.top);
+    const move=ev=>{
+      const dx=ev.clientX-sx, dy=ev.clientY-sy;
+      div.style.left=(left+dx)+'px'; div.style.top=(top+dy)+'px';
+    };
+    const up=()=>{div.classList.remove('dragging'); window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up)};
+    window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
+  };
+  div.addEventListener('pointerdown',onPointerDown);
+  // 回転ハンドル
+  const h=document.createElement('div'); h.className='handle'; div.appendChild(h);
+  h.onpointerdown=e=>{
+    e.stopPropagation(); sx=e.clientX; sy=e.clientY; const base=rot;
+    const move=ev=>{rot = base + (ev.clientX-sx)/2; div.style.transform=`rotate(${rot}deg) scale(${scale})`};
+    const up=()=>{window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up)};
+    window.addEventListener('pointermove',move); window.addEventListener('pointerup',up);
+  };
+  // ピンチズーム（簡易）
+  div.addEventListener('wheel',e=>{e.preventDefault(); scale=Math.max(0.2, Math.min(4, scale+(e.deltaY<0?0.05:-0.05))); div.style.transform=`rotate(${rot}deg) scale(${scale})`},{passive:false});
+  div.ondblclick=()=>div.remove();
+  qs('#stageWrap').appendChild(div);
+}
+qs('#addSofa').onclick=()=>addFurniture('sofa');
+qs('#addTable').onclick=()=>addFurniture('table');
+qs('#addPlant').onclick=()=>addFurniture('plant');
 
-/* タブ初期化 */
-document.querySelector('.tab').click();
-</script>
-</body></html>
+qs('#autoPlace').onclick=()=>{
+  // 画像内の下部1/3に等間隔で安全配置（画外に出ないクランプ）
+  const w=stage.clientWidth, h=stage.clientHeight, y=h*0.65;
+  const items=[...document.querySelectorAll('.furniture')];
+  items.forEach((el,i)=>{el.style.left= Math.max(10,Math.min(w-180, 20+i*(w/items.length)))+'px'; el.style.top= Math.min(h-180, y)+'px';});
+};
+
+qs('#clearFurniture').onclick=()=>qsa('.furniture').forEach(e=>e.remove());
+
+// 基準2点
+qs('#set2pt').onclick=()=>{
+  if(!imgBitmap){alert('画像がありません'); return;}
+  guard.classList.add('on'); scalePPM=null; p1=null;p2=null;
+  const click=e=>{
+    const r=stage.getBoundingClientRect();
+    const x=e.clientX-r.left, y=e.clientY-r.top;
+    if(!p1){p1={x,y}}
+    else if(!p2){p2={x,y}; finalize()}
+    drawBase();
+  };
+  const finalize=()=>{
+    const dx=p2.x-p1.x, dy=p2.y-p1.y; const pix=Math.hypot(dx,dy);
+    const meter = parseFloat(qs('#baseLen').value||1);
+    scalePPM = pix / meter; // pixel per meter
+    qs('#scaleBadge').textContent = `スケール 1m ≒ ${scalePPM.toFixed(1)}px`;
+    guard.classList.remove('on');
+    stage.removeEventListener('click',click);
+  };
+  stage.addEventListener('click',click,{once:false});
+  // 安全タイムアウト
+  setTimeout(()=>{guard.classList.remove('on'); stage.removeEventListener('click',click)}, 20000);
+};
+
+// ====== 計測 ======
+const mcv=qs('#mCanvas'), mctx=mcv.getContext('2d'); let mImg=null, rects=[];
+function mFit(){ if(!mImg) return; const w=mcv.parentElement.clientWidth; const h=Math.round(mImg.height*w/mImg.width); mcv.width=w; mcv.height=h; mDraw(); }
+function mDraw(){
+  if(!mImg) return; mctx.setTransform(1,0,0,1,0,0); mctx.clearRect(0,0,mcv.width,mcv.height);
+  mctx.drawImage(mImg,0,0,mcv.width,mcv.height);
+  mctx.strokeStyle="#3cf"; mctx.lineWidth=2;
+  rects.forEach(r=>{mctx.strokeRect(r.x,r.y,r.w,r.h)});
+  // KPI
+  const up=[]; const ppm=scalePPM||300; rects.forEach((r,i)=>{const a=(r.w/ppm)*(r.h/ppm); up.push(`<span class='chip'>#${i+1} 面積:${a.toFixed(2)}㎡  概算:${Math.round(a*parseFloat(qs('#unitPrice').value||0)).toLocaleString()}円</span>`)}); qs('#mKpi').innerHTML=up.join(' ');
+}
+qs('#mUseStage').onclick=async()=>{
+  if(!imgBitmap){alert('まずステージ画面で画像を用意');return;}
+  mImg=imgBitmap; mFit();
+};
+qs('#mAddRect').onclick=()=>{
+  if(!mImg){alert('画像がありません');return;}
+  let start=null;
+  const down=e=>{
+    const r=mcv.getBoundingClientRect(); const x=e.clientX-r.left,y=e.clientY-r.top; start={x,y};
+    const move=ev=>{const rr=mcv.getBoundingClientRect(); const w=ev.clientX-rr.left-start.x, h=ev.clientY-rr.top-start.y; mDraw(); mctx.strokeStyle="#ffdb3a"; mctx.strokeRect(start.x,start.y,w,h);}
+    const up=ev=>{const rr=mcv.getBoundingClientRect(); rects.push({x:start.x,y:start.y,w:ev.clientX-rr.left-start.x,h:ev.clientY-rr.top-start.y}); mcv.removeEventListener('pointermove',move); mcv.removeEventListener('pointerup',up); mDraw();}
+    mcv.addEventListener('pointermove',move); mcv.addEventListener('pointerup',up,{once:true});
+  };
+  mcv.addEventListener('pointerdown',down,{once:true});
+};
+qs('#mClear').onclick=()=>{rects=[]; mDraw();}
+window.addEventListener('resize',()=>{mFit(); drawBase()});
+
+// ====== 騒音 ======
+let audioCtx, analyser, micSrc, rafId=null, specCols=300;
+const wave=qs('#wave'), wctx=wave.getContext('2d');
+const spec=qs('#spec'), sctx=spec.getContext('2d');
+function stopAudio(){ if(rafId) cancelAnimationFrame(rafId); if(audioCtx){audioCtx.close(); audioCtx=null;} }
+qs('#micStop').onclick=stopAudio;
+qs('#micStart').onclick=async()=>{
+  stopAudio();
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+    audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0.8;
+    micSrc = audioCtx.createMediaStreamSource(stream); micSrc.connect(analyser);
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    const tbuf = new Float32Array(analyser.fftSize);
+    const draw=()=>{
+      analyser.getFloatTimeDomainData(tbuf);
+      // 簡易dB
+      let sum=0; for(let i=0;i<tbuf.length;i++) sum+=tbuf[i]*tbuf[i];
+      const rms = Math.sqrt(sum/tbuf.length); const db = 20*Math.log10(rms+1e-6)+90;
+      const r=parseFloat(qs('#dbRange').value||60);
+      qs('#minDb').textContent='最小:'+Math.max(-100,db-10).toFixed(1);
+      qs('#maxDb').textContent='最大:'+Math.min(120,db+10).toFixed(1);
+      qs('#avgDb').textContent='平均:'+db.toFixed(1);
+      // 波形
+      wave.width = wave.parentElement.clientWidth; wctx.clearRect(0,0,wave.width,wave.height);
+      wctx.strokeStyle="#65c7ff"; wctx.beginPath();
+      for(let i=0;i<wave.width;i++){ const idx=Math.floor(i*tbuf.length/wave.width); const y=wave.height*0.5 - tbuf[idx]*wave.height*(0.45*r/60); i? wctx.lineTo(i,y):wctx.moveTo(i,y);}
+      wctx.stroke();
+      // スペクトログラム
+      analyser.getByteFrequencyData(buf);
+      const col = sctx.createImageData(1,spec.height);
+      for(let y=0;y<spec.height;y++){
+        const fi = Math.floor(y*buf.length/spec.height);
+        const v = buf[fi]/255; // 0..1
+        const color = vToColor(v);
+        col.data[y*4+0]=color[0]; col.data[y*4+1]=color[1]; col.data[y*4+2]=color[2]; col.data[y*4+3]=255;
+      }
+      // スクロール描画
+      const w = spec.parentElement.clientWidth; if(spec.width!==w){spec.width=w; spec.height=spec.height}
+      sctx.drawImage(spec, -1, 0); sctx.putImageData(col, spec.width-1, 0);
+      rafId=requestAnimationFrame(draw);
+    }; draw();
+  }catch(e){alert('マイク計測失敗: '+e.message)}
+};
+function vToColor(v){ // blue->yellow
+  const r = Math.min(255, Math.max(0, 512*(v-0.5)));
+  const g = Math.min(255, Math.max(0, 512*(v-0.25)));
+  const b = Math.min(255, Math.max(0, 512*(0.5-v)));
+  return [r,g,b];
+}
+
+// ====== 土地値 ======
+function calcLand(){
+  const ro=+qs('#rosen').value||0, ko=+qs('#koji').value||0, de=+qs('#deal').value||0;
+  const avg = [ro,ko,de].filter(x=>x>0).reduce((a,b)=>a+b,0)/Math.max(1,[ro,ko,de].filter(x=>x>0).length);
+  const area=+qs('#landArea').value||0; const priceM=+qs('#priceM').value||0;
+  const landV = avg*area; const ratio = priceM>0? (landV/ (priceM*1000)).toFix
