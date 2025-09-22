@@ -3,17 +3,18 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
-<title>内見ユーティリティ（全部入り v8.2 単一HTML）</title>
+<title>内見ユーティリティ（全部入り v8.3 単一HTML）</title>
 <style>
 :root{
   --bg:#0f1a2b; --panel:#12213a; --ink:#e9f1ff; --muted:#9fb3d8;
   --accent:#43b5ff; --ok:#2ac06d; --warn:#f0ad4e; --bad:#e35;
   --btn:#162845; --line:#274166;
 }
-*{box-sizing:border-box} html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,"Noto Sans JP",sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,Segoe UI,Roboto,"Noto Sans JP",sans-serif}
 h1{font-size:18px;margin:12px 12px 0}
 small{color:var(--muted)}
-.container{padding:8px 12px 100px}
+.container{padding:8px 12px 120px}
 .tabs{position:sticky;top:0;z-index:10000;background:linear-gradient(#0f1a2b,#0f1a2bcc 70%,#0f1a2b00)}
 .tabs .row{display:flex;gap:8px;flex-wrap:wrap;padding:10px 12px 8px}
 .btn{background:var(--btn);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:10px 14px;font-weight:600}
@@ -33,23 +34,27 @@ video,canvas.img{display:block;width:100%;height:auto}
   background:radial-gradient(#fff 45%,#e7f5ff 46% 60%,#7ad0ff 61%);border:4px solid #0a2744;box-shadow:0 6px 18px #0006;display:none}
 .guard{position:absolute;inset:0;z-index:8000;display:none;background:transparent}
 .guard.on{display:block;pointer-events:auto}
-.furniture{position:absolute;left:50%;top:75%;width:180px;transform:translate(-50%,-50%);touch-action:none;user-select:none;transform-origin:center}
+.furniture{position:absolute;left:50%;top:75%;width:180px;transform:translate(-50%,-50%);touch-action:none;user-select:none;transform-origin:center;pointer-events:auto}
 .furniture.drag{outline:2px dashed #7cf}
 .knob{position:absolute;right:-12px;bottom:-12px;width:26px;height:26px;border-radius:50%;background:var(--accent);border:2px solid #07263e}
 .kpi{display:flex;gap:8px;flex-wrap:wrap}
 .kpi .chip{background:#0a1430;border:1px solid var(--line);border-radius:10px;padding:6px 10px}
 .table{width:100%;border-collapse:collapse}
 .table th,.table td{border-bottom:1px solid #24385d;padding:8px 6px}
-footer{position:sticky;bottom:0;background:linear-gradient(#0f1a2b00,#0f1a2bE6 30%,#0f1a2b);padding:10px 12px;z-index:9999}
+footer{position:sticky;bottom:0;background:linear-gradient(#0f1a2b00,#0f1a2bE6 30%,#0f1a2b);padding:10px 12px;z-index:9999;pointer-events:none}
 hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
 .hidden{display:none}
 .hud{position:absolute;left:8px;top:8px;z-index:8500;display:flex;gap:6px;flex-wrap:wrap}
 .hud .btn{padding:6px 8px;border-radius:10px}
 #noiseControls .btn{z-index:9500;position:relative}
+#heat{position:absolute;inset:0;pointer-events:none}
+#video{pointer-events:none}
+#tapFix{position:fixed;right:10px;bottom:90px;z-index:11000;border-radius:12px;padding:10px 12px;background:#e33;color:#fff;border:2px solid #fff}
+#tapEcho{position:fixed;left:10px;bottom:90px;z-index:11000;background:#0b1730;color:#cfe0ff;border:1px solid #2c4064;border-radius:10px;padding:6px 8px;max-width:60vw}
 </style>
 </head>
 <body>
-<h1>内見ユーティリティ（全部入り v8.2） <small id="ua"></small></h1>
+<h1>内見ユーティリティ（全部入り v8.3） <small id="ua"></small></h1>
 
 <div class="tabs">
   <div class="row">
@@ -92,7 +97,7 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
     </div>
     <video id="video" playsinline class="hidden"></video>
     <canvas id="stage" class="img"></canvas>
-    <canvas id="heat" class="img" style="position:absolute;inset:0;pointer-events:none"></canvas>
+    <canvas id="heat" class="img"></canvas>
     <div id="guard" class="guard"></div>
     <button id="fabShot" title="撮影"></button>
   </div>
@@ -227,10 +232,12 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
 
 </div>
 
-<footer><small>© 内見ユーティリティ v8.2 — 改訂履歴・設計思想はキャンバス管理（完全版のみ出力・機能削除禁止）</small></footer>
+<button id="tapFix" title="タップ復旧">タップ復旧</button>
+<div id="tapEcho" class="hidden">tap debug</div>
+
+<footer><small>© 内見ユーティリティ v8.3 — 改訂履歴・設計思想はキャンバス管理（完全版のみ出力・機能削除禁止）</small></footer>
 
 <script>
-// 共通
 const qs=s=>document.querySelector(s), qsa=s=>[...document.querySelectorAll(s)];
 qs('#ua').textContent=navigator.userAgent;
 qsa('[data-tab]').forEach(b=>b.onclick=()=>{
@@ -239,6 +246,27 @@ qsa('[data-tab]').forEach(b=>b.onclick=()=>{
   qsa('[data-tab]').forEach(x=>x.classList.remove('primary')); b.classList.add('primary');
 });
 
+// ===== タップ復旧（グローバル・キルスイッチ） =====
+function tapFix(){
+  // 透明オーバーレイの無効化
+  qsa('.guard').forEach(g=>{g.classList.remove('on'); g.style.pointerEvents='none'; g.style.display='none';});
+  // 動画/ヒートはクリック無効
+  const v=qs('#video'); if(v){ v.style.pointerEvents='none'; }
+  const heat=qs('#heat'); if(heat){ heat.style.pointerEvents='none'; }
+  // 騒音ボタンを最前面
+  const nc=qs('#noiseControls'); if(nc){ nc.style.zIndex=9500; }
+  // 全ボタンを強制 pointer-events: auto
+  qsa('button,.btn,select,input,label').forEach(el=>{ el.style.pointerEvents='auto'; el.disabled=false; el.style.opacity=1; });
+}
+qs('#tapFix').onclick=()=>{ tapFix(); console.log('[tapFix] applied'); };
+
+// タップデバッグ（どの要素が拾っているか可視化）
+document.addEventListener('pointerdown',e=>{
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  const box = qs('#tapEcho'); box.textContent = 'tap: '+(el?.tagName||'none')+(el?.id?('#'+el.id):'')+(el?.className?('.'+el.className):'');
+  box.classList.remove('hidden'); setTimeout(()=>box.classList.add('hidden'),1200);
+}, {passive:true});
+
 // ===== ステージング =====
 const wrap=qs('#stageWrap'), video=qs('#video'), fab=qs('#fabShot'),
       cv=qs('#stage'), ctx=cv.getContext('2d'),
@@ -246,15 +274,10 @@ const wrap=qs('#stageWrap'), video=qs('#video'), fab=qs('#fabShot'),
 let stream=null, baseBitmap=null, scalePPM=null, p1=null,p2=null;
 
 // 角度管理（多角度スプライト）
-let angleIdx=0; const angles=[0,15,30,45]; // 表示用
+let angleIdx=0; const angles=[0,15,30,45];
 qs('#anglePrev').onclick=()=>{ angleIdx=(angleIdx-1+angles.length)%angles.length; qs('#angleInfo').textContent=`角度: ${angles[angleIdx]}°`; swapFurnitureAngle(); };
 qs('#angleNext').onclick=()=>{ angleIdx=(angleIdx+1)%angles.length; qs('#angleInfo').textContent=`角度: ${angles[angleIdx]}°`; swapFurnitureAngle(); };
-function swapFurnitureAngle(){
-  // 家具に data-angleN の属性があれば差し替え
-  qsa('.furniture').forEach(el=>{
-    const src=el.dataset['angle'+angleIdx]; if(src) el.src=src;
-  });
-}
+function swapFurnitureAngle(){ qsa('.furniture').forEach(el=>{ const src=el.dataset['angle'+angleIdx]; if(src) el.src=src; }); }
 
 function fitCanvas(w,h){ const W=wrap.clientWidth, H=Math.round(h*W/w); cv.width=W; cv.height=H; heat.width=W; heat.height=H; wrap.style.height=H+'px'; }
 async function drawBase(){
@@ -314,15 +337,15 @@ qs('#set2pt').onclick=()=>{
 };
 
 // 家具（写真スプライト：多角度）
-function addFurnSet(imgs){ // imgs: array of URLs
+function addFurnSet(imgs){
   const el=document.createElement('img'); el.className='furniture';
-  imgs.forEach((u,i)=>el.dataset['angle'+i]=u); el.src=imgs[angleIdx]||imgs[0];
+  imgs.forEach((u,i)=>el.dataset['angle'+i]=u); el.src=imgs[Math.min(angleIdx,imgs.length-1)]||imgs[0];
   let x=wrap.clientWidth*0.5, y=wrap.clientHeight*0.75, scale=1, rot=0, touches=new Map();
   function apply(){ el.style.left=x+'px'; el.style.top=y+'px'; el.style.transform=`translate(-50%,-50%) rotate(${rot}deg) scale(${scale})`; }
   const onDown=e=>{
     el.classList.add('drag'); const sx=e.clientX, sy=e.clientY, ox=x, oy=y;
     const mv=ev=>{ x=ox+(ev.clientX-sx); y=oy+(ev.clientY-sy); clamp(); apply(); };
-    const up=()=>{el.classList.remove('drag'); window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up);}
+    const up=()=>{el.classList.remove('drag'); window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up)}
     window.addEventListener('pointermove',mv,{passive:false}); window.addEventListener('pointerup',up,{once:true});
   };
   const knob=document.createElement('div'); knob.className='knob'; el.appendChild(knob);
@@ -347,33 +370,8 @@ function addFurnSet(imgs){ // imgs: array of URLs
 }
 function dataUrlPlaceholder(color="#666"){
   const c=document.createElement('canvas'); c.width=512; c.height=320; const x=c.getContext('2d');
-  x.fillStyle=color; x.fillRect(0,0,c.width,c.height); x.fillStyle="#fff"; x.font="bold 28px system-ui"; x.fillText("家具（写真素材）",120,170);
+  x.fillStyle=color; x.fillRect(0,0,c.width,c.height); x.fillStyle="#fff"; x.font="bold 26px system-ui"; x.fillText("家具（写真素材）",120,170);
   return c.toDataURL("image/jpeg",0.9);
 }
-// 仮の多角度写真（承認後、私が権利クリアのフォト素材を生成して差替）
 qs('#addSofa').onclick=()=>addFurnSet([dataUrlPlaceholder("#576"),dataUrlPlaceholder("#686"),dataUrlPlaceholder("#798"),dataUrlPlaceholder("#8a9")]);
-qs('#addTable').onclick=()=>addFurnSet([dataUrlPlaceholder("#845"),dataUrlPlaceholder("#975"),dataUrlPlaceholder("#a86"),dataUrlPlaceholder("#b97")]);
-qs('#addPlant').onclick=()=>addFurnSet([dataUrlPlaceholder("#2a5"),dataUrlPlaceholder("#2b6"),dataUrlPlaceholder("#2c7"),dataUrlPlaceholder("#2d8")]);
-// ユーザーの複数角度登録
-qs('#addCustom').onclick=()=>qs('#multiInput').click();
-qs('#multiInput').onchange=e=>{ const urls=[...e.target.files].map(f=>URL.createObjectURL(f)); if(urls.length) addFurnSet(urls); };
-
-// 自動配置：下部40%をダウンサンプル→Sobel→エッジ密度が低い帯を床候補に
-qs('#autoPlace').onclick=()=>{
-  const items=[...document.querySelectorAll('.furniture')]; if(!items.length) return alert('先に家具を追加');
-  if(!baseBitmap){alert('背景がありません');return;}
-  // ダウンサンプル
-  const w=160,h=Math.max(40, Math.round((cv.height*0.4)/ (cv.width/cv.height) * (w/cv.width)));
-  const t=document.createElement('canvas'); t.width=w; t.height=h; const tc=t.getContext('2d');
-  const srcY=cv.height*0.6; tc.drawImage(cv, 0, srcY, cv.width, cv.height-srcY, 0, 0, w, h);
-  // Sobel簡易
-  const img=tc.getImageData(0,0,w,h).data; const dens=new Array(h).fill(0);
-  for(let y=1;y<h-1;y++){ let sum=0;
-    for(let x=1;x<w-1;x++){
-      const i=(y*w+x)*4, gx= img[i-4]-img[i+4], gy= img[i-w*4]-img[i+w*4];
-      sum+= Math.abs(gx)+Math.abs(gy);
-    }
-    dens[y]=sum/(w-2);
-  }
-  let best=0, bestVal=1e18; for(let y=1;y<h-1;y++){ if(dens[y]<bestVal){bestVal=dens[y]; best=y;} }
-  const floorY = Math.round(cv.height*0.6 + (best/h)*(cv.h
+qs('#addTable').onclick=()=>addFurnSet([dataUrlPlaceholder("#8
