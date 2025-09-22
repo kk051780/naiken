@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no">
-<title>内見ユーティリティ（全部入り v8.1 単一HTML）</title>
+<title>内見ユーティリティ（全部入り v8.2 単一HTML）</title>
 <style>
 :root{
   --bg:#0f1a2b; --panel:#12213a; --ink:#e9f1ff; --muted:#9fb3d8;
@@ -43,10 +43,11 @@ video,canvas.img{display:block;width:100%;height:auto}
 footer{position:sticky;bottom:0;background:linear-gradient(#0f1a2b00,#0f1a2bE6 30%,#0f1a2b);padding:10px 12px;z-index:9999}
 hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
 .hidden{display:none}
+.sectionTitle{margin:6px 0 0;font-weight:700;color:#cfe0ff}
 </style>
 </head>
 <body>
-<h1>内見ユーティリティ（全部入り v8.1） <small id="ua"></small></h1>
+<h1>内見ユーティリティ（全部入り v8.2） <small id="ua"></small></h1>
 
 <div class="tabs">
   <div class="row">
@@ -67,11 +68,12 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
   <div class="row">
     <button class="btn" id="camStart">カメラ起動</button>
     <button class="btn" id="shotTop">撮影</button>
-    <label class="btn"><input type="file" id="pickPhoto" accept="image/*" capture="environment" class="hidden">写真を選ぶ</label>
+    <button class="btn" id="pickBtn">写真を選ぶ</button><input type="file" id="pickPhoto" accept="image/*" class="hidden">
     <button class="btn" id="autoPlace">家具 自動配置</button>
     <button class="btn" id="clearFurn">家具 クリア</button>
     <span id="scaleBadge" class="badge">スケール未設定</span>
   </div>
+
   <div class="row">
     <label>基準長さ(m)</label><input type="number" id="baseLen" min="0.1" step="0.1" value="2.0">
     <button class="btn" id="set2pt">確定（基準2点）</button>
@@ -79,6 +81,13 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
     <label>Pitch</label><input type="range" id="pitch" min="-45" max="45" value="0">
     <label>Roll</label><input type="range" id="roll" min="-45" max="45" value="0">
     <label>ズーム</label><input type="range" id="zoom" min="0.5" max="2.0" value="1" step="0.01">
+  </div>
+
+  <div class="row">
+    <span class="sectionTitle">画像補正：</span>
+    <label>明るさ</label><input type="range" id="br" min="0.5" max="1.5" step="0.01" value="1">
+    <label>コントラスト</label><input type="range" id="ct" min="0.5" max="1.8" step="0.01" value="1">
+    <label>彩度</label><input type="range" id="st" min="0" max="2" step="0.01" value="1">
   </div>
 
   <div class="canvasWrap" id="stageWrap">
@@ -89,12 +98,12 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
   </div>
 
   <div class="row" style="margin-top:10px">
-    <button class="btn" id="addSofa">ソファ追加</button>
-    <button class="btn" id="addTable">テーブル追加</button>
-    <button class="btn" id="addPlant">観葉追加</button>
-    <label class="btn"><input type="file" id="addFurn" accept="image/*" multiple hidden>家具画像を追加</label>
+    <button class="btn" id="addSetSofa">ソファ(セット)追加</button>
+    <button class="btn" id="addSetTable">テーブル(セット)追加</button>
+    <button class="btn" id="addSetPlant">観葉(セット)追加</button>
+    <button class="btn" id="addFurnSet">家具セット読込</button><input type="file" id="furnSet" accept="image/*" multiple class="hidden">
   </div>
-  <small>手順: カメラ起動→右下シャッター/上部「撮影」→または写真選択。<b>基準2点</b>で実寸化。家具はドラッグ/回転ハンドル/ピンチで拡縮、ダブルタップ削除。自動配置で安全帯に整列。</small>
+  <small>手順: カメラ起動→右下/上部「撮影」または写真選択。<b>基準2点</b>で実寸化。家具はドラッグ/回転ハンドル/ピンチ拡縮。Yawスライダで**角度画像セット**を切替（3D回転）。自動配置は床候補帯へ整列。</small>
 </section>
 
 <!-- ===== 間取り・実寸 ===== -->
@@ -103,6 +112,8 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
     <button class="btn" id="mUseStage">ステージ画像を使う</button>
     <label>㎡単価(円)</label><input type="number" id="unitPrice" value="1200" step="100">
     <button class="btn" id="mAddRect">矩形を追加</button>
+    <button class="btn" id="mPoly">多角形モード</button>
+    <button class="btn" id="mUndo">一手戻す</button>
     <button class="btn" id="mClear">クリア</button>
   </div>
   <div class="canvasWrap"><canvas id="mCanvas" class="img"></canvas></div>
@@ -143,10 +154,11 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
     <label>路線価(千円/m²)</label><input type="number" id="rosen" step="1">
     <label>公示価格(千円/m²)</label><input type="number" id="koji" step="1">
     <label>近傍成約(千円/m²)</label><input type="number" id="deal" step="1">
-    <button class="btn" id="avg3">3点平均を計算</button>
+    <button class="btn" id="avg3">3点平均</button>
+    <button class="btn" id="fetchRosen">路線価 自動取得(β)</button>
   </div>
   <div id="landKpi" class="kpi"></div>
-  <small>自動取得は単体HTMLではCORSのため不可な場合あり。手入力で算出。サーバ版では/proxy経由で自動化。</small>
+  <small>注: 単体HTMLからの外部取得はCORSで失敗する場合があります（その際は手入力で算出）。サーバ版では /proxy を介して自動化します。</small>
 </section>
 
 <!-- ===== 収支/DSCR ===== -->
@@ -172,15 +184,26 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
   <div id="dscrKpi" class="kpi"></div>
 </section>
 
-<!-- ===== 内見チェック ===== -->
+<!-- ===== 内見チェック（ガイド＋表） ===== -->
 <section id="check" class="panel hidden">
   <div class="row">
+    <button class="btn" id="startGuide">ガイドを開始</button>
     <button class="btn" id="addItem">項目を追加</button>
     <select id="presetC">
       <option value="">テンプレを挿入</option>
       <option>外壁・屋根雨漏り</option><option>室内壁天井</option><option>床/床鳴り</option>
       <option>水回り(キッチン/浴室/洗面/トイレ)</option><option>建具/サッシ</option><option>電気/換気</option>
     </select>
+  </div>
+  <div id="guide" class="panel" style="background:#0b1730;border:1px dashed #2b4570;display:none">
+    <div id="gStep" class="sectionTitle"></div>
+    <div style="margin:6px 0 10px" id="gHint" class="small"></div>
+    <button class="btn" id="gShot">この項目を撮影/選択</button><input type="file" id="gFile" accept="image/*,video/*" class="hidden">
+    <div class="row">
+      <label>状態</label><select id="gJudge"><option>良</option><option>可</option><option>要修繕</option></select>
+      <label>概算(円)</label><input type="number" id="gCost" value="0" step="1000">
+    </div>
+    <div class="row"><button class="btn" id="gNext">次へ</button></div>
   </div>
   <table class="table" id="tbl">
     <thead><tr><th>項目</th><th>判定</th><th>数量</th><th>単位</th><th>単価(円)</th><th>概算</th><th>写真/動画</th></tr></thead>
@@ -199,172 +222,124 @@ hr.sep{border:none;border-top:1px dashed #2a3d5f;margin:12px 0}
 
 </div>
 
-<footer><small>© 内見ユーティリティ v8.1 — 改訂履歴・設計思想はキャンバス管理（完全版のみ出力・機能削除禁止）</small></footer>
+<footer><small>© 内見ユーティリティ v8.2 — 改訂履歴・設計思想はキャンバス管理（完全版のみ・機能削除禁止）</small></footer>
 
 <script>
 const qs=s=>document.querySelector(s), qsa=s=>[...document.querySelectorAll(s)];
 qs('#ua').textContent=navigator.userAgent;
-// タブ切替
-qsa('[data-tab]').forEach(b=>b.onclick=()=>{
-  const t=b.dataset.tab; qsa('section').forEach(s=>s.classList.add('hidden'));
-  qs('#'+t).classList.remove('hidden');
-  qsa('[data-tab]').forEach(x=>x.classList.remove('primary')); b.classList.add('primary');
-});
+// タブ
+qsa('[data-tab]').forEach(b=>b.onclick=()=>{ const t=b.dataset.tab; qsa('section').forEach(s=>s.classList.add('hidden')); qs('#'+t).classList.remove('hidden'); qsa('[data-tab]').forEach(x=>x.classList.remove('primary')); b.classList.add('primary'); });
 
 // ===== ステージング =====
 const wrap=qs('#stageWrap'), video=qs('#video'), fab=qs('#fabShot'), guard=qs('#guard'), cv=qs('#stage'), ctx=cv.getContext('2d');
 let stream=null, baseBitmap=null, scalePPM=null, p1=null,p2=null;
+let filters={br:1,ct:1,st:1};
 
 function fitCanvas(w,h){ const W=wrap.clientWidth, H=Math.round(h*W/w); cv.width=W; cv.height=H; wrap.style.height=H+'px'; }
+function applyFilter(){ ctx.filter=`brightness(${filters.br}) contrast(${filters.ct}) saturate(${filters.st})`; }
 async function drawBase(){
   if(!baseBitmap) return;
   fitCanvas(baseBitmap.width, baseBitmap.height);
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,cv.width,cv.height);
+  applyFilter();
   const yaw=+qs('#yaw').value*Math.PI/180, pitch=+qs('#pitch').value*Math.PI/180, roll=+qs('#roll').value*Math.PI/180, zoom=+qs('#zoom').value;
-  ctx.translate(cv.width/2,cv.height/2); ctx.scale(zoom,zoom); ctx.rotate(roll);
-  ctx.transform(1, Math.tan(pitch)/8, Math.tan(yaw)/8, 1, 0, 0); ctx.translate(-cv.width/2,-cv.height/2);
+  ctx.translate(cv.width/2,cv.height/2); ctx.scale(zoom,zoom); ctx.rotate(roll); ctx.transform(1, Math.tan(pitch)/8, Math.tan(yaw)/8, 1, 0, 0); ctx.translate(-cv.width/2,-cv.height/2);
   ctx.drawImage(baseBitmap,0,0,cv.width,cv.height);
-  if(p1&&p2){ ctx.fillStyle="#ffc400"; ctx.strokeStyle="#ffc400"; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
-    ctx.beginPath(); ctx.arc(p1.x,p1.y,6,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(p2.x,p2.y,6,0,Math.PI*2); ctx.fill(); }
+  if(p1&&p2){ ctx.filter='none'; ctx.fillStyle="#ffc400"; ctx.strokeStyle="#ffc400"; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke(); ctx.beginPath(); ctx.arc(p1.x,p1.y,6,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(p2.x,p2.y,6,0,Math.PI*2); ctx.fill(); }
 }
 function snapshotFromVideo(){
   const w=video.videoWidth||1280, h=video.videoHeight||720;
-  const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h;
-  const tctx=tmp.getContext('2d'); tctx.drawImage(video,0,0,w,h);
+  const tmp=document.createElement('canvas'); tmp.width=w; tmp.height=h; tmp.getContext('2d').drawImage(video,0,0,w,h);
   return createImageBitmap? createImageBitmap(tmp) : new Promise(res=>{ const img=new Image(); img.onload=()=>res(img); img.src=tmp.toDataURL(); });
 }
-async function ensureBitmapFromFile(file){
-  if(createImageBitmap){ return await createImageBitmap(file); }
-  return new Promise(res=>{ const img=new Image(); img.onload=()=>res(img); img.src=URL.createObjectURL(file); });
-}
+async function ensureBitmapFromFile(file){ if(createImageBitmap){ return await createImageBitmap(file); } return new Promise(res=>{ const img=new Image(); img.onload=()=>res(img); img.src=URL.createObjectURL(file); }); }
 
-qs('#camStart').onclick=async()=>{
-  try{
-    if(stream) return;
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-    video.srcObject=stream; await video.play(); video.classList.remove('hidden'); fab.style.display='block';
-    // ライブプレビュー中も背景に最新フレームを反映
-    const loop=async()=>{ if(!video.srcObject) return;
-      baseBitmap = await snapshotFromVideo(); await drawBase(); requestAnimationFrame(loop); };
-    loop();
-  }catch(e){ alert('カメラ失敗: '+e.message); }
-};
+qs('#camStart').onclick=async()=>{ try{ if(stream) return; stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+  video.srcObject=stream; await video.play(); video.classList.remove('hidden'); fab.style.display='block';
+  const loop=async()=>{ if(!video.srcObject) return; baseBitmap = await snapshotFromVideo(); await drawBase(); requestAnimationFrame(loop); }; loop();
+}catch(e){ alert('カメラ失敗: '+e.message); } };
 function stopCam(){ if(stream){ stream.getTracks().forEach(t=>t.stop()); stream=null; } video.pause(); video.srcObject=null; video.classList.add('hidden'); fab.style.display='none'; }
 function shoot(){ if(!baseBitmap){ alert('先にカメラ起動/写真選択'); return; } drawBase(); stopCam(); }
 qs('#shotTop').onclick=shoot; fab.onclick=shoot;
 
-qs('#pickPhoto').onchange=async e=>{
-  const f=e.target.files[0]; if(!f) return;
-  baseBitmap = await ensureBitmapFromFile(f); await drawBase(); stopCam();
-};
+// 画像選択（label廃止・専用ボタン→input.click）
+qs('#pickBtn').onclick=()=>qs('#pickPhoto').click();
+qs('#pickPhoto').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; baseBitmap = await ensureBitmapFromFile(f); await drawBase(); stopCam(); };
 
 ['yaw','pitch','roll','zoom'].forEach(id=>qs('#'+id).oninput=drawBase);
+['br','ct','st'].forEach(id=>qs('#'+id).oninput=e=>{ filters[id]=+e.target.value; drawBase(); });
 
-// 基準2点（ガードは一時ON→タイムアウト）
-qs('#set2pt').onclick=()=>{
-  if(!baseBitmap){alert('先に画像');return;}
-  guard.classList.add('on'); p1=null;p2=null;
-  const onClick=e=>{
-    const r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top;
-    if(!p1){ p1={x,y}; drawBase(); }
-    else{ p2={x,y}; const pix=Math.hypot(p2.x-p1.x,p2.y-p1.y); const meter=Math.max(0.01,parseFloat(qs('#baseLen').value||'1')); scalePPM=pix/meter;
-      qs('#scaleBadge').textContent=`スケール 1m ≒ ${scalePPM.toFixed(1)}px`; guard.classList.remove('on'); cv.removeEventListener('click',onClick); p1=null;p2=null; drawBase(); }
-  };
+// 基準2点
+qs('#set2pt').onclick=()=>{ if(!baseBitmap){alert('先に画像');return;} guard.classList.add('on'); p1=null;p2=null;
+  const onClick=e=>{ const r=cv.getBoundingClientRect(), x=e.clientX-r.left, y=e.clientY-r.top; if(!p1){ p1={x,y}; drawBase(); }
+    else { p2={x,y}; const pix=Math.hypot(p2.x-p1.x,p2.y-p1.y); const meter=Math.max(0.01,parseFloat(qs('#baseLen').value||'1')); scalePPM=pix/meter; qs('#scaleBadge').textContent=`スケール 1m ≒ ${scalePPM.toFixed(1)}px`; guard.classList.remove('on'); cv.removeEventListener('click',onClick); p1=null;p2=null; drawBase(); } };
   cv.addEventListener('click',onClick); setTimeout(()=>{guard.classList.remove('on'); cv.removeEventListener('click',onClick)},20000);
 };
 
-// 家具（SVG内蔵＋外部読み込み）— 2本指ピンチ対応
-function svgSofa(){return `<svg xmlns='http://www.w3.org/2000/svg' width='260' height='150'>
-  <rect x='0' y='50' rx='14' ry='14' width='260' height='100' fill='#3b67ff' stroke='#ffffffaa' stroke-width='3'/>
-  <rect x='16' y='20' rx='12' ry='12' width='100' height='60' fill='#4c77ff'/>
-  <rect x='144' y='20' rx='12' ry='12' width='100' height='60' fill='#4c77ff'/></svg>`}
-function svgTable(){return `<svg xmlns='http://www.w3.org/2000/svg' width='220' height='140'>
-  <rect x='0' y='20' rx='10' ry='10' width='220' height='80' fill='#8b5a2b' stroke='#ffffffaa' stroke-width='3'/>
-  <rect x='40' y='100' width='12' height='40' fill='#6d4520'/><rect x='168' y='100' width='12' height='40' fill='#6d4520'/></svg>`}
-function svgPlant(){return `<svg xmlns='http://www.w3.org/2000/svg' width='140' height='180'>
-  <rect x='50' y='120' width='40' height='60' fill='#7b4e2a'/>
-  <circle cx='70' cy='90' r='60' fill='#2aa35d' stroke='#ffffffaa' stroke-width='3'/></svg>`}
-
-function addFurn(src){
-  const el=document.createElement('img'); el.className='furniture'; el.src=src;
-  let x=wrap.clientWidth*0.5, y=wrap.clientHeight*0.75, scale=1, rot=0;
-  let touches=new Map();
+// 家具（角度セット） =========
+function makeSet(kind){ // 簡易のフォト風ダミー（実運用は生成画像に差替）
+  const base = kind==='sofa' ? sofaSvg : kind==='table' ? tableSvg : plantSvg;
+  // 12方向分（0..330°）。今は同一画像をCSS回転で代替し、将来は各角度の写真を差替。
+  return Array.from({length:12},(_,i)=>'data:image/svg+xml;utf8,'+encodeURIComponent(base()));
+}
+function addSet(set){ const el=document.createElement('img'); el.className='furniture'; el.dataset.yaw='0'; el.dataset.set=JSON.stringify(set);
+  el.src=set[0];
+  // 3D回転: 背景Yawスライダに追従（将来は個別スライダも可）
+  const updateYaw=()=>{ const deg=((+qs('#yaw').value%360)+360)%360; const idx=Math.round((deg/360)*set.length)%set.length; if(el.dataset.yaw!=idx){ el.dataset.yaw=idx; el.src=set[idx]; } };
+  qs('#yaw').addEventListener('input',updateYaw);
+  // ドラッグ/回転/ピンチ
+  let x=wrap.clientWidth*0.5,y=wrap.clientHeight*0.75,scale=1,rot=0; let touches=new Map();
   function apply(){ el.style.left=x+'px'; el.style.top=y+'px'; el.style.transform=`translate(-50%,-50%) rotate(${rot}deg) scale(${scale})`; }
-  const onDown=e=>{
-    el.classList.add('drag'); const sx=e.clientX, sy=e.clientY, ox=x, oy=y;
-    const mv=ev=>{ x=ox+(ev.clientX-sx); y=oy+(ev.clientY-sy); clamp(); apply(); };
-    const up=()=>{el.classList.remove('drag'); window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up);}
-    window.addEventListener('pointermove',mv,{passive:false}); window.addEventListener('pointerup',up,{once:true});
-  };
+  const onDown=e=>{ el.classList.add('drag'); const sx=e.clientX, sy=e.clientY, ox=x, oy=y; const mv=ev=>{x=ox+(ev.clientX-sx); y=oy+(ev.clientY-sy); clamp(); apply();}; const up=()=>{el.classList.remove('drag'); window.removeEventListener('pointermove',mv); window.removeEventListener('pointerup',up)}; window.addEventListener('pointermove',mv,{passive:false}); window.addEventListener('pointerup',up,{once:true}); };
   const knob=document.createElement('div'); knob.className='knob'; el.appendChild(knob);
-  knob.onpointerdown=e=>{ e.stopPropagation(); const sx=e.clientX, base=rot; const mv=ev=>{rot=base+(ev.clientX-sx)/2; apply();}; const up=()=>window.removeEventListener('pointermove',mv);
-    window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up,{once:true}); };
+  knob.onpointerdown=e=>{ e.stopPropagation(); const sx=e.clientX, base=rot; const mv=ev=>{rot=base+(ev.clientX-sx)/2; apply();}; const up=()=>window.removeEventListener('pointermove',mv); window.addEventListener('pointermove',mv); window.addEventListener('pointerup',up,{once:true}); };
+  el.addEventListener('pointerdown',onDown);
   // ピンチ
   el.addEventListener('pointerdown',e=>touches.set(e.pointerId,{x:e.clientX,y:e.clientY}),{passive:true});
-  el.addEventListener('pointermove',e=>{
-    if(!touches.has(e.pointerId)) return;
-    touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(touches.size===2){
-      const [a,b]=[...touches.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y);
-      if(!el._d0){ el._d0=d; el._s0=scale; }
-      scale=Math.max(.2, Math.min(4, el._s0 * (d/el._d0))); apply();
-    }
-  },{passive:true});
+  el.addEventListener('pointermove',e=>{ if(!touches.has(e.pointerId)) return; touches.set(e.pointerId,{x:e.clientX,y:e.clientY}); if(touches.size===2){ const [a,b]=[...touches.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y); if(!el._d0){ el._d0=d; el._s0=scale; } scale=Math.max(.2,Math.min(4, el._s0*(d/el._d0))); apply(); } },{passive:true});
   el.addEventListener('pointerup',e=>{touches.delete(e.pointerId); if(touches.size<2){ el._d0=null; }},{passive:true});
-  el.addEventListener('pointercancel',e=>touches.delete(e.pointerId));
-  el.addEventListener('pointerdown',onDown);
-  // ダブルタップ削除
   let last=0; el.addEventListener('click',e=>{const t=Date.now(); if(t-last<300){ el.remove(); } last=t;});
   function clamp(){ const m=20,W=wrap.clientWidth,H=wrap.clientHeight; x=Math.max(m,Math.min(W-m,x)); y=Math.max(m,Math.min(H-m,y)); }
-  qs('#stageWrap').appendChild(el); apply();
+  wrap.appendChild(el); apply(); updateYaw();
 }
-qs('#addSofa').onclick=()=>addFurn('data:image/svg+xml;utf8,'+encodeURIComponent(svgSofa()));
-qs('#addTable').onclick=()=>addFurn('data:image/svg+xml;utf8,'+encodeURIComponent(svgTable()));
-qs('#addPlant').onclick=()=>addFurn('data:image/svg+xml;utf8,'+encodeURIComponent(svgPlant()));
-qs('#addFurn').onchange=e=>{[...e.target.files].forEach(f=>addFurn(URL.createObjectURL(f)));};
+qs('#addSetSofa').onclick=()=>addSet(makeSet('sofa'));
+qs('#addSetTable').onclick=()=>addSet(makeSet('table'));
+qs('#addSetPlant').onclick=()=>addSet(makeSet('plant'));
+qs('#addFurnSet').onclick=()=>qs('#furnSet').click();
+qs('#furnSet').onchange=e=>{ const files=[...e.target.files]; if(!files.length) return;
+  // 角度順に選択されている前提で読み込み
+  Promise.all(files.map(f=>URL.createObjectURL(f))).then(urls=>addSet(urls));
+};
 
+// 自動配置（床帯検出 β）
 qs('#autoPlace').onclick=()=>{
   const items=[...document.querySelectorAll('.furniture')]; if(!items.length) return alert('先に家具を追加');
-  const W=wrap.clientWidth,H=wrap.clientHeight; const y=H*0.7;
-  items.forEach((el,i)=>{ const n=items.length; const x=(i+1)/(n+1)*W; el.style.left=x+'px'; el.style.top=y+'px'; });
+  if(!baseBitmap){ alert('先に背景画像'); return; }
+  // 低解像でエッジ密度を評価し、下部のエッジが少ない帯を床候補とする
+  const dw=160, dh=Math.round(dw*cv.height/cv.width), tmp=document.createElement('canvas'); tmp.width=dw; tmp.height=dh; const tctx=tmp.getContext('2d');
+  tctx.drawImage(cv,0,0,dw,dh); const img=tctx.getImageData(0,0,dw,dh).data; const rowScore=new Array(dh).fill(0);
+  for(let y=0;y<dh;y++){ let s=0; for(let x=1;x<dw;x++){ const i=(y*dw+x)*4, j=(y*dw+x-1)*4;
+      const d=Math.abs(img[i]-img[j])+Math.abs(img[i+1]-img[j+1])+Math.abs(img[i+2]-img[j+2]); if(d>60) s++; } rowScore[y]=s/dw; }
+  // 下1/2の行でスコアが低い連続帯の中央値を採用
+  const start=Math.floor(dh*0.5); let bestY=start, bestScore=999;
+  for(let y=start;y<dh;y++){ if(rowScore[y]<bestScore){ bestScore=rowScore[y]; bestY=y; } }
+  const floorY = bestY/dh * cv.clientHeight;
+  const W=wrap.clientWidth; items.forEach((el,i)=>{ const n=items.length; const x=(i+1)/(n+1)*W; el.style.left=x+'px'; el.style.top=Math.min(wrap.clientHeight-40,floorY)+'px'; });
 };
-qs('#clearFurn').onclick=()=>document.querySelectorAll('.furniture').forEach(e=>e.remove());
+
+// 撮影
+qs('#shotTop').onclick=shoot; fab.onclick=shoot;
 
 // ===== 間取り・実寸 =====
-const mcv=qs('#mCanvas'), mctx=mcv.getContext('2d'); let mImg=null, rects=[];
+const mcv=qs('#mCanvas'), mctx=mcv.getContext('2d'); let mImg=null, rects=[], poly=[], polyMode=false;
 function mFit(){ if(!mImg) return; const W=mcv.parentElement.clientWidth; const H=Math.round(mImg.height*W/mImg.width); mcv.width=W; mcv.height=H; mDraw(); }
+function ppm(){ return scalePPM||300; }
 function mDraw(){
   if(!mImg) return; mctx.setTransform(1,0,0,1,0,0); mctx.clearRect(0,0,mcv.width,mcv.height);
   mctx.drawImage(mImg,0,0,mcv.width,mcv.height);
+  // rects
   mctx.strokeStyle="#3cf"; mctx.lineWidth=2; rects.forEach(r=>mctx.strokeRect(r.x,r.y,r.w,r.h));
-  const ppm=scalePPM||300, up=[]; const unit=+qs('#unitPrice').value||0;
-  rects.forEach((r,i)=>{ const a=(Math.abs(r.w)/ppm)*(Math.abs(r.h)/ppm); up.push(`<span class="chip">#${i+1} 面積:${a.toFixed(2)}㎡ 概算:${Math.round(a*unit).toLocaleString()}円</span>`); });
-  qs('#mKpi').innerHTML=up.join(' ');
-}
-qs('#mUseStage').onclick=()=>{ if(!baseBitmap){alert('まずステージで画像を用意');return;} mImg=baseBitmap; mFit(); };
-qs('#mAddRect').onclick=()=>{ if(!mImg){alert('画像がありません');return;}
-  let start=null; const down=e=>{ const r=mcv.getBoundingClientRect(); start={x:e.clientX-r.left,y:e.clientY-r.top};
-    const mv=ev=>{ const rr=mcv.getBoundingClientRect(); mDraw(); mctx.strokeStyle="#ffd74a"; mctx.strokeRect(start.x,start.y, ev.clientX-rr.left-start.x, ev.clientY-rr.top-start.y); };
-    const up=ev=>{ const rr=mcv.getBoundingClientRect(); rects.push({x:start.x,y:start.y,w:ev.clientX-rr.left-start.x,h:ev.clientY-rr.top-start.y}); mcv.removeEventListener('pointermove',mv); mcv.removeEventListener('pointerup',up); mDraw(); };
-    mcv.addEventListener('pointermove',mv,{passive:false}); mcv.addEventListener('pointerup',up,{once:true});
-  }; mcv.addEventListener('pointerdown',down,{once:true});
-};
-qs('#mClear').onclick=()=>{rects=[]; mDraw();};
-window.addEventListener('resize',()=>{ mFit(); drawBase(); });
-
-// ===== 騒音（波形＋時系列FFT）=====
-let aCtx=null, analyser=null, micSrc=null, rafId=0;
-const wave=qs('#wave'), wctx=wave.getContext('2d'), spec=qs('#spec'), sctx=spec.getContext('2d');
-function stopAudio(){ if(rafId) cancelAnimationFrame(rafId); if(aCtx){ aCtx.close(); aCtx=null; } }
-qs('#micStop').onclick=stopAudio;
-qs('#micStart').onclick=async()=>{
-  stopAudio();
-  try{
-    const st = await navigator.mediaDevices.getUserMedia({audio:true});
-    aCtx=new (window.AudioContext||window.webkitAudioContext)(); analyser=aCtx.createAnalyser(); analyser.fftSize=2048; analyser.smoothingTimeConstant=0.8;
-    micSrc=aCtx.createMediaStreamSource(st); micSrc.connect(analyser);
-    const tbuf=new Float32Array(analyser.fftSize); const fbuf=new Uint8Array(analyser.frequencyBinCount);
-    const draw=()=>{
-      // 波形
-      analyser.getFloatTimeDomainData(tbuf);
-      wave.width=wave.parentElement.clientWidth; wctx.fillStyle="#000"; wctx.fillRect(0,0,wave.width,wave.he
+  // polygon
+  if(poly.length){ mctx.strokeStyle="#ffd74a"; mctx.fillStyle="#ffd74a66"; mctx.beginPath(); mctx.moveTo(poly[0].x,poly[0].y); for(let i=1;i<poly.length;i++) mctx.lineTo(poly[i].x,poly[i].y); mctx.stroke(); }
+  // KPI
+  const up=[]; const unit=+qs('#unitPrice').value||0
