@@ -1,279 +1,422 @@
 <!doctype html>
 <html lang="ja">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>内見ユーティリティ v8.5 preview（単体HTML）</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>不動産・内見ユーティリティ v8.7-complete-01</title>
 <style>
-  :root{--bg:#0f1a2a;--panel:#12233a;--accent:#29b6f6;--text:#e6f0ff;--muted:#9fb5d1;--ok:#27ae60;--warn:#f39c12;--bad:#e74c3c}
-  *{box-sizing:border-box} body{margin:0;font-family:ui-sans-serif,system-ui,"Hiragino Kaku Gothic ProN",Meiryo,Arial;background:var(--bg);color:var(--text)}
-  header{position:sticky;top:0;z-index:9999;background:linear-gradient(180deg,#0f1a2a,#0f1a2acc);backdrop-filter:saturate(1.1) blur(4px);}
-  .tabs{display:flex;gap:.5rem;flex-wrap:wrap;padding:.5rem}
-  .btn{background:#19324f;color:var(--text);border:1px solid #2b476a;border-radius:.8rem;padding:.6rem .9rem;font-weight:600}
-  .btn.primary{background:var(--accent);color:#042034}
-  .wrap{padding:.75rem}
-  .panel{background:var(--panel);border:1px solid #1c3453;border-radius:1rem;padding:.75rem;margin:.75rem 0}
-  .row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:center}
-  label{font-size:.9rem;color:var(--muted)} input,select{background:#0e1b2d;color:var(--text);border:1px solid #244363;border-radius:.6rem;padding:.45rem .6rem}
-  .grid{display:grid;gap:.75rem}
-  @media(min-width:840px){.grid.cols-2{grid-template-columns:1fr 1fr}}
-  canvas,video,img{max-width:100%;border-radius:.5rem}
-  .sticky-ops{position:sticky;top:3.1rem;z-index:9998;background:#0f1a2aee;padding:.5rem;border-bottom:1px solid #1c3453}
-  .danger{color:#fff;background:var(--bad)}
-  /* 拡大 UI スライダ */
-  .sl{width:min(520px,90vw)}
-  /* タップ診断 HUD */
-  #tapHud{position:fixed;inset:0;pointer-events:none;z-index:99999}
-  .hint{font-size:.85rem;color:#bcd2ea}
-  .chip{display:inline-flex;gap:.4rem;align-items:center;padding:.25rem .55rem;border-radius:999px;background:#1a3350;border:1px solid #2a4a72;font-size:.8rem}
+:root{
+  --bg:#0b1524;--panel:#0f1f36;--border:#1e3a66;--txt:#e6f0ff;--hint:#cfe2ff;
+  --pri:#3b82f6;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444;--mut:#9fb7da;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+header{position:sticky;top:0;z-index:1000;background:rgba(11,21,36,.9);backdrop-filter:saturate(1.2) blur(8px);border-bottom:1px solid var(--border)}
+.headwrap{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;padding:.6rem}
+.brand{font-weight:700;letter-spacing:.3px}
+.ver{color:var(--mut);font-size:.85rem}
+nav{display:flex;gap:.4rem;flex-wrap:wrap}
+.btn{background:#12284a;border:1px solid var(--border);color:var(--txt);padding:.45rem .7rem;border-radius:.6rem;cursor:pointer}
+.btn.primary{background:var(--pri);border-color:#2563eb}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.sl,.in,textarea{background:#0c1728;border:1px solid var(--border);color:var(--txt);padding:.5rem;border-radius:.6rem;width:100%}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:.9rem;padding:.9rem;margin:.9rem}
+.grid{display:grid;gap:.6rem}
+.cols-2{grid-template-columns:1fr 1fr}
+.cols-3{grid-template-columns:1fr 1fr 1fr}
+.row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+.hint{color:var(--hint);font-size:.9rem}
+.badge{padding:.2rem .5rem;border:1px solid var(--border);border-radius:.5rem;background:#10213a;color:#cfe2ff}
+.label{display:inline-block;background:#1a355a;border:1px solid #294f80;border-radius:.5rem;padding:.1rem .45rem;margin-right:.3rem}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{border-bottom:1px solid #173055;padding:.5rem .6rem;vertical-align:top}
+.table thead th{position:sticky;top:112px;background:#0f1f36;z-index:3}
+.mbar{height:8px;border:1px solid #203c63;border-radius:6px;background:#0d1a2a;overflow:hidden}
+.mbar>i{display:block;height:100%;background:#29b6f6}
+.mbar.k>i{background:#10b981}
+.mbar.d>i{background:#f59e0b}
+.tag{display:inline-block;margin:.1rem .2rem;padding:.08rem .4rem;border:1px solid #345a8e;border-radius:.6rem;background:#1a3456}
+.good{color:var(--ok)} .bad{color:var(--bad)} .mut{color:var(--mut)}
+.tabs button{white-space:nowrap}
+section[hidden]{display:none !important}
+canvas{max-width:100%;border:1px solid #173055;border-radius:.6rem;background:#000}
+#camVideo{width:100%;border:1px solid #173055;border-radius:.6rem;background:#000}
+.overlay{position:absolute;inset:0;pointer-events:none}
+.stageWrap{position:relative}
+#stageCanvas{touch-action:none}
+.toolbar{position:sticky;bottom:0;z-index:900;display:flex;gap:.4rem;flex-wrap:wrap;background:rgba(15,31,54,.9);padding:.5rem;border-top:1px solid var(--border)}
+@media (max-width:900px){ .cols-3{grid-template-columns:1fr} .cols-2{grid-template-columns:1fr} .table thead th{top:140px} }
 </style>
 </head>
 <body>
-  <header>
-    <div class="tabs">
+<header>
+  <div class="headwrap">
+    <div class="brand">内見・ステージング Suite</div>
+    <div class="ver">v8.7-complete-01（全機能統合）</div>
+    <nav class="tabs">
       <button class="btn primary" data-tab="stage">ステージング</button>
+      <button class="btn" data-tab="floor">間取り</button>
       <button class="btn" data-tab="noise">騒音</button>
-      <button class="btn" data-tab="measure">間取り・実寸</button>
-      <button class="btn" data-tab="land">物件情報/土地値比率</button>
-      <button class="btn" data-tab="finance">収支/DSCR</button>
-      <button class="btn" data-tab="check">内見チェック</button>
-      <span class="chip" id="tapDiagToggle">タップ診断:OFF</span>
-    </div>
-  </header>
+      <button class="btn" data-tab="rank">ランキング</button>
+      <button class="btn" data-tab="loan">融資レーダー</button>
+      <button class="btn" data-tab="inspect">内見チェック</button>
+      <button class="btn" data-tab="finance">評価/資金</button>
+      <button class="btn" id="saveAll">保存</button>
+      <button class="btn" id="loadAll">復元</button>
+    </nav>
+  </div>
+</header>
 
-  <main class="wrap">
-    <!-- ステージング -->
-    <section id="tab-stage" class="panel">
-      <div class="sticky-ops row">
-        <button class="btn" id="camStart">カメラ起動</button>
-        <button class="btn" id="snap">撮影</button>
-        <label class="btn" for="file">写真を選ぶ</label><input id="file" type="file" accept="image/*" capture hidden>
-        <button class="btn" id="autoPlace">家具 自動配置</button>
-        <button class="btn" id="clearItems">家具 クリア</button>
-        <label class="hint">基準長さ(m)</label><input id="baseLen" type="number" step="0.1" value="2.0" style="width:6rem">
-        <button class="btn" id="pick2">確定（基準2点）</button>
+<main>
+  <!-- ステージング -->
+  <section id="tab-stage" class="panel">
+    <h2>① ステージング（写真選択/カメラ・自動家具配置・360擬似回転）</h2>
+    <div class="grid cols-2">
+      <div>
+        <div class="row">
+          <input type="file" id="pickImg" accept="image/*" class="in">
+          <button class="btn" id="useCam">カメラ起動</button>
+          <button class="btn" id="snap">撮影</button>
+          <span class="hint">※スマホはHTTPS推奨。写真選択は常にOK。</span>
+        </div>
+        <video id="camVideo" playsinline muted></video>
+        <div class="stageWrap" style="margin-top:.6rem">
+          <canvas id="stageCanvas" width="960" height="540"></canvas>
+          <canvas id="overCanvas" class="overlay" width="960" height="540"></canvas>
+        </div>
+        <div class="toolbar">
+          <button class="btn" id="analyzeRoom">部屋解析</button>
+          <select id="furnType" class="sl" style="width:9rem">
+            <option value="sofa">ソファ</option><option value="table">テーブル</option><option value="bed">ベッド</option><option value="plant">観葉植物</option>
+          </select>
+          <label class="label">角度</label><input id="yaw" type="range" min="-60" max="60" step="1" value="0" class="sl" style="width:140px">
+          <button class="btn" id="autoPlace">自動配置</button>
+          <button class="btn" id="clearStage">消去</button>
+        </div>
+        <div class="hint">操作：キャンバス上ドラッグで家具移動／ホイールでサイズ／ダブルタップで固定。</div>
       </div>
-      <div class="row" style="gap:1rem;align-items:flex-start">
+      <div>
+        <h3>部屋解析の考え方（MVP）</h3>
+        <ul>
+          <li>床候補＝画像下部の明度高域＋Sobelエッジ少域</li>
+          <li>窓候補＝明度高域＋縦長矩形群</li>
+          <li>壁＝床以外の領域、家具配置は床中央→壁から適正距離</li>
+        </ul>
+        <canvas id="roomDiag" width="320" height="180"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- 間取り -->
+  <section id="tab-floor" class="panel" hidden>
+    <h2>② 間取り（多角形 + 2点スケール校正）</h2>
+    <div class="grid cols-2">
+      <div>
+        <canvas id="planCanvas" width="640" height="480"></canvas>
+        <div class="toolbar">
+          <button class="btn" id="addVertex">頂点追加</button>
+          <button class="btn" id="closePoly">面を確定</button>
+          <button class="btn" id="scale2pt">2点スケール</button>
+          <span class="hint" id="planMsg">点をクリックして多角形を作成。</span>
+        </div>
+      </div>
+      <div>
+        <div class="row">
+          <label class="badge">実寸スケール(m/px)</label><input id="scaleVal" class="in" style="width:8rem" value="0">
+          <label class="badge">面積</label><span id="areaVal" class="hint">0.00 m²</span>
+        </div>
+        <div class="hint">2点スケール：キャンバスで2点をクリック→実寸距離(m)を入力→m/pxが自動設定。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 騒音 -->
+  <section id="tab-noise" class="panel" hidden>
+    <h2>③ 騒音（波形＋時間FFTスペクトログラム＋スキャン型ホログラフィ）</h2>
+    <div class="grid cols-2">
+      <div>
+        <div class="row">
+          <button class="btn" id="micStart">計測開始</button>
+          <button class="btn" id="micStop">停止</button>
+          <label class="label">FFT N</label><input id="fftN" type="number" class="in" value="2048" style="width:6rem">
+          <label class="label">dBレンジ</label><input id="dbMin" type="number" class="in" value="-90" style="width:6rem"><input id="dbMax" type="number" class="in" value="-30" style="width:6rem">
+        </div>
+        <canvas id="wave" width="640" height="120"></canvas>
+        <canvas id="spec" width="640" height="240"></canvas>
+        <div class="hint">縦=周波数（低→高）、横=時間、濃いほど騒音レベル高。</div>
+      </div>
+      <div>
+        <h3>簡易 音響“ホログラフィ”MVP</h3>
+        <video id="micCam" playsinline muted style="width:100%;border:1px solid #173055;border-radius:.6rem;background:#000"></video>
+        <canvas id="micHeat" class="overlay" width="640" height="360"></canvas>
+        <div class="row">
+          <button class="btn" id="scanStart">スキャン開始</button>
+          <button class="btn" id="scanStop">終了</button>
+          <span class="hint">端末をゆっくり動かして音源方向をスキャン→画面上に熱量で蓄積（単一マイクのため近似）。</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ランキング -->
+  <section id="tab-rank" class="panel" hidden>
+    <h2>④ 土地値ランキング（サイト抽出＋駅/地域＋公示/成約3点＋DSCR）</h2>
+
+    <div class="panel">
+      <h3>入力CSV（住所, 価格(万円), 土地面積(m²) [,メモ]）</h3>
+      <textarea id="csv" rows="5" class="sl"></textarea>
+      <div class="row">
+        <label class="badge">閾値: 路/代 ≥ <span id="thrVal">0.80</span></label>
+        <input id="thr" type="range" min="0.50" max="1.00" step="0.01" value="0.80" class="sl" style="width:220px">
+        <button class="btn" id="loadSample">サンプル3件</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>サイト抽出（HTML貼付 or URL）</h3>
+      <div class="grid cols-2">
         <div>
-          <video id="vid" autoplay playsinline muted style="max-height:40vh"></video>
-          <canvas id="stage" width="1280" height="720"></canvas>
-          <div class="row">
-            <label>Yaw</label><input id="yaw" type="range" min="-180" max="180" value="0" class="sl">
-            <label>Pitch</label><input id="pitch" type="range" min="-45" max="45" value="0" class="sl">
-            <label>Roll</label><input id="roll" type="range" min="-45" max="45" value="0" class="sl">
-            <label>スケール</label><input id="scale" type="range" min="30" max="200" value="100" class="sl">
+          <div class="hint">一覧HTMLを貼付→住所/価格/面積を抽出してCSVへ追記（ユーザー操作起因）</div>
+          <textarea id="htmlPaste" rows="6" class="sl"></textarea>
+          <div class="row" style="margin-top:.4rem">
+            <button class="btn" id="parseHtml">貼付HTMLを解析→CSV追加</button>
+            <button class="btn" id="clearHtml">クリア</button>
+            <span class="hint" id="ingestMsg"></span>
           </div>
         </div>
         <div>
-          <div class="hint">※ 家具は生成写真素材に差し替え可能（多角度）。ドラッグで移動、ダブルタップで削除。</div>
-          <button class="btn" id="addSofa">ソファ 追加（ダミー）</button>
-          <button class="btn" id="addPlant">観葉 追加（ダミー）</button>
+          <div class="hint">URL取得→抽出（CORSで失敗する場合あり。失敗時はHTML貼付で）</div>
+          <input id="listUrl" class="sl" placeholder="https://example.com/list">
+          <button class="btn" id="fetchUrl">URL取得→抽出→CSV追記</button>
+          <div class="hint" id="fetchMsg"></div>
         </div>
       </div>
-    </section>
+    </div>
 
-    <!-- 騒音 -->
-    <section id="tab-noise" class="panel" hidden>
-      <div class="sticky-ops row">
-        <button class="btn" id="micStart">マイク計測開始</button>
-        <button class="btn" id="micStop">停止</button>
-        <label>感度</label><input id="gain" type="range" min="1" max="8" value="2">
-        <label>時間窓(s)</label><input id="timeWin" type="range" min="5" max="30" value="12">
-      </div>
-      <div class="grid cols-2">
-        <div>
-          <canvas id="wave" width="800" height="180"></canvas>
-          <div class="hint">波形（dB相当）。感度でスケーリング。</div>
+    <div class="panel">
+      <h3>駅・地域フィルタ / 公示・成約APIキー</h3>
+      <div class="grid cols-3">
+        <div><label>駅名</label><input id="stName" class="in" placeholder="例: 藤枝"></div>
+        <div><label>基準エリア</label><input id="stArea" class="in" placeholder="例: 静岡県藤枝市"></div>
+        <div class="row">
+          <label class="label">徒歩上限(分)</label><input id="stWalk" type="number" class="in" value="20" style="width:6rem">
+          <button class="btn" id="stSearch">駅検索→確定</button>
+          <span class="hint" id="stMsg">未選択</span>
         </div>
-        <div>
-          <canvas id="spec" width="800" height="240"></canvas>
-          <div class="hint">スペクトログラム（横=時間, 縦=周波数, 色=レベル）。</div>
-        </div>
+        <div><label>公示/成約 APIキー</label><input id="reKey" class="in" placeholder="Ocp-Apim-Subscription-Key"></div>
+        <div class="hint">未設定でもOK（スキップ）。路線価はサーバ側予定のため公示×係数で代替。</div>
       </div>
-      <div class="panel">
-        <video id="vNoise" autoplay playsinline muted style="max-height:30vh"></video>
-        <canvas id="holo" width="800" height="300"></canvas>
-        <div class="hint">簡易 音響ホログラフィ：カメラの動き×帯域エネルギで疑似ヒートマップ重畳。</div>
-      </div>
-    </section>
+    </div>
 
-    <!-- 物件情報 / 土地値比率 -->
-    <section id="tab-land" class="panel" hidden>
+    <div class="panel" style="overflow:auto">
       <div class="row">
-        <button class="btn" id="addrGps">GPSで住所</button>
-        <input id="addr" placeholder="住所" style="width:min(520px,90vw)">
+        <button class="btn primary" id="runRank">ランキング生成</button>
+        <button class="btn" id="saveCsv">CSV保存</button>
+        <span class="hint" id="rankMsg">未計算</span>
       </div>
-      <div class="row">
-        <button class="btn" id="fetchLand">路線価/公示/近傍 取得（実験）</button>
-        <button class="btn" id="avg3">3点平均を計算</button>
-      </div>
-      <div class="grid cols-2">
-        <div class="panel"><label>路線価(千円/m²)</label><input id="rosen" type="number" step="1"></div>
-        <div class="panel"><label>公示価格(千円/m²)</label><input id="koji" type="number" step="1"></div>
-        <div class="panel"><label>近傍成約(千円/m²)</label><input id="deal" type="number" step="1"></div>
-        <div class="panel"><label>3点平均(千円/m²)</label><input id="avg" type="number" step="1" readonly></div>
-      </div>
-      <div class="hint" id="landMsg"></div>
-    </section>
+      <table class="table" id="rankTbl">
+        <thead>
+          <tr>
+            <th>#</th><th>住所</th>
+            <th style="text-align:right">販売(万)</th>
 
-    <!-- 収支/DSCR -->
-    <section id="tab-finance" class="panel" hidden>
-      <div class="grid cols-2">
+            <th style="text-align:right">土地値(路/代,万)</th>
+            <th style="text-align:right">比率(路/代)</th>
+
+            <th style="text-align:right">土地値(公示,万)</th>
+            <th style="text-align:right">比率(公)</th>
+
+            <th style="text-align:right">近傍成約 平均(万)</th>
+            <th style="text-align:right">成約比率</th>
+
+            <th style="text-align:right">駅距離(m)</th>
+            <th style="text-align:right">徒歩(分)</th>
+
+            <th style="text-align:right">DSCR</th>
+            <th>エビデンス</th><th>メモ</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 融資レーダー -->
+  <section id="tab-loan" class="panel" hidden>
+    <h2>⑤ 融資レーダー（フル/オーバー抽出）</h2>
+    <div class="row">
+      <label class="badge">フルのみ</label><input id="onlyFull" type="checkbox">
+      <label class="badge">オーバーのみ</label><input id="onlyOver" type="checkbox">
+      <label class="badge">LTV下限</label><input id="minLtv" type="number" min="0" max="100" value="0" class="in" style="width:6rem">
+      <button class="btn primary" id="loanRun">取得→抽出</button>
+    </div>
+    <textarea id="loanInput" rows="5" class="sl" placeholder="URL / yt:CHANNEL_ID / 直接テキストを1行ずつ"></textarea>
+    <div class="hint" id="loanMsg"></div>
+    <table class="table" id="loanTbl">
+      <thead><tr>
+        <th>銀行/機関</th><th>種別</th><th style="text-align:right">LTV</th>
+        <th style="text-align:right">金利</th><th>属性/エリア</th><th>抜粋</th><th>出典</th><th>日付</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <!-- 内見チェック -->
+  <section id="tab-inspect" class="panel" hidden>
+    <h2>⑥ 内見チェック（初心者ガイド＋撮影＋概算修繕）</h2>
+    <div class="grid cols-2">
+      <div>
+        <select id="chkCat" class="sl">
+          <option>水回り</option><option>躯体/雨漏り</option><option>床・壁・天井</option>
+          <option>窓/建具</option><option>電気/設備</option><option>共用部/外構</option>
+        </select>
         <div class="panel">
-          <h3>家賃・空室</h3>
-          <label>月額家賃(円)</label><input id="rent" type="number" value="70000">
-          <label>稼働率</label><input id="occ" type="number" step="0.01" value="0.95">
-        </div>
-        <div class="panel">
-          <h3>築年数プリセット</h3>
-          <select id="agePreset">
-            <option value="0">~5年</option>
-            <option value="1">6~15年</option>
-            <option value="2">16~25年</option>
-            <option value="3" selected>26年以上</option>
+          <div id="chkGuide" class="hint">カテゴリのポイントがここに表示</div>
+          <input type="file" accept="image/*,video/*" id="chkCap" class="in" multiple>
+          <label class="label">状態</label>
+          <select id="chkState" class="sl">
+            <option>良</option><option>注意</option><option>要修繕</option>
           </select>
-          <div class="hint">選ぶと固定費・経費率の初期値が反映されます（後から手修正可）。</div>
+          <label class="label">概算修繕(万円)</label><input id="chkCost" class="in" value="0" style="width:7rem">
+          <button class="btn" id="chkAdd">記録</button>
+        </div>
+        <div class="row">
+          <button class="btn" id="chkExport">レポート出力（印刷/PDF）</button>
         </div>
       </div>
-      <div class="panel">
-        <h3>固定費 内訳（年）</h3>
-        <div class="grid cols-2">
-          <div><label>火災/地震保険</label><input id="fxInsurance" type="number" value="12000"></div>
-          <div><label>共用電気</label><input id="fxElectric" type="number" value="18000"></div>
-          <div><label>ネット/回線</label><input id="fxNet" type="number" value="12000"></div>
-          <div><label>清掃/雑費</label><input id="fxClean" type="number" value="12000"></div>
-        </div>
+      <div>
+        <table class="table"><thead><tr><th>#</th><th>カテゴリ</th><th>状態</th><th>概算(万)</th><th>メモ/ファイル</th></tr></thead><tbody id="chkTbl"></tbody></table>
+        <div class="hint" id="chkSum">合計修繕費: 0 万円</div>
       </div>
-      <div class="panel">
-        <h3>経費率 内訳（収入比）</h3>
-        <div class="grid cols-2">
-          <div><label>管理委託</label><input id="exMgmt" type="number" step="0.01" value="0.05"></div>
-          <div><label>修繕積立</label><input id="exRepair" type="number" step="0.01" value="0.07"></div>
-          <div><label>広告/募集</label><input id="exAd" type="number" step="0.01" value="0.02"></div>
-          <div><label>その他</label><input id="exOther" type="number" step="0.01" value="0.02"></div>
-        </div>
-      </div>
-      <div class="panel grid cols-2">
-        <div>
-          <h3>借入</h3>
-          <label>借入額(円)</label><input id="loan" type="number" value="15000000">
-          <label>金利</label><input id="rate" type="number" step="0.01" value="0.02">
-          <label>返済年数</label><input id="years" type="number" value="30">
-        </div>
-        <div>
-          <h3>結果</h3>
-          <div id="financeOut" class="hint"></div>
-        </div>
-      </div>
-      <button class="btn" id="calcFinance">再計算</button>
-    </section>
+    </div>
+  </section>
 
-    <!-- 内見チェック（簡易） -->
-    <section id="tab-check" class="panel" hidden>
-      <div class="hint">写真例を見ながら、各ステップで撮影/判定してください。修繕概算を自動集計します。</div>
-      <div id="guide" class="grid"></div>
-      <div class="hint" id="sumRepair"></div>
-    </section>
-
-    <!-- 間取り（簡易プレースホルダ） -->
-    <section id="tab-measure" class="panel" hidden>
-      <div class="hint">v8系では多角形で面を作成し面積計算（補正機能あり）を実装予定。暫定 UI。</div>
-      <canvas id="plan" width="900" height="460" style="background:#0c1726"></canvas>
-      <div class="row">
-        <button class="btn" id="polyStart">ポリゴン開始</button>
-        <button class="btn" id="polyClose">面を閉じる</button>
-        <div class="hint" id="planOut"></div>
+  <!-- 評価/資金 -->
+  <section id="tab-finance" class="panel" hidden>
+    <h2>⑦ 住所・価格の自動取得 / 固定費・経費率プリセット / DSCR</h2>
+    <div class="grid cols-3">
+      <div>
+        <label>現在地から住所取得</label>
+        <button class="btn" id="addrFromGps">GPS→住所</button>
+        <div class="hint" id="addrMsg">未取得</div>
       </div>
-    </section>
-  </main>
-
-  <canvas id="tapHud"></canvas>
+      <div>
+        <label>販売価格(万円)</label><input id="vPrice" class="in" value="3000">
+        <label>延床(m²)</label><input id="vFloor" class="in" value="80">
+      </div>
+      <div>
+        <label>築年数</label><input id="vAge" class="in" value="20">
+        <label>構造</label>
+        <select id="vStruct" class="sl"><option>木造</option><option>S造</option><option>RC</option></select>
+      </div>
+    </div>
+    <div class="grid cols-3" style="margin-top:.6rem">
+      <div>
+        <h3>賃料/稼働</h3>
+        <label>月額賃料(万円)</label><input id="vRent" class="in" value="12">
+        <label>稼働率(%)</label><input id="vOcc" class="in" value="95">
+      </div>
+      <div>
+        <h3>固定費/経費率（築年プリセット）</h3>
+        <div class="row"><button class="btn" id="applyPreset">プリセット適用</button><span class="hint">築年で自動入力</span></div>
+        <label>固定費(万円/年)</label><input id="vFixed" class="in" value="20">
+        <label>経費率(%)</label><input id="vOpex" class="in" value="25">
+      </div>
+      <div>
+        <h3>借入</h3>
+        <label>借入額(万円)</label><input id="vDebt" class="in" value="2400">
+        <label>金利(%)</label><input id="vRate" class="in" value="2.0">
+        <label>年数</label><input id="vYears" class="in" value="25">
+      </div>
+    </div>
+    <div class="row" style="margin-top:.6rem">
+      <button class="btn primary" id="calcDscr">DSCR計算</button>
+      <span class="hint" id="finMsg">NOI/返済/DSCR を表示</span>
+    </div>
+  </section>
+</main>
 
 <script>
-// ——— タブ切替
-const tabs=[...document.querySelectorAll('[data-tab]')];
-const sections={stage:document.getElementById('tab-stage'),noise:document.getElementById('tab-noise'),measure:document.getElementById('tab-measure'),land:document.getElementById('tab-land'),finance:document.getElementById('tab-finance'),check:document.getElementById('tab-check')};
-for(const t of tabs){t.addEventListener('click',()=>{tabs.forEach(b=>b.classList.remove('primary'));t.classList.add('primary');Object.values(sections).forEach(s=>s.hidden=true);sections[t.dataset.tab].hidden=false;});}
+// ====== 共有ユーティリティ ======
+const $=sel=>document.querySelector(sel);
+const $$=sel=>Array.from(document.querySelectorAll(sel));
+function bar(p, cls=''){ const w=Math.max(0,Math.min(100,(p*100))); return `<div class="mbar ${cls}"><i style="width:${w}%;"></i></div><div style="text-align:right;font-size:.85rem;color:#cfe2ff">${(p*100).toFixed(1)}%</div>`; }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const hav=x=>Math.sin(x/2)**2;
+function distMeters(lat1,lon1,lat2,lon2){ const R=6371000,to=d=>d*Math.PI/180;
+  return 2*R*Math.asin(Math.sqrt(hav(to(lat2-lat1))+Math.cos(to(lat1))*Math.cos(to(lat2))*hav(to(lon2-lon1)))); }
+function walkMin(m){ return Math.ceil(m/80); }
+function parseCSV(txt){ return txt.split(/\n/).map(L=>L.trim()).filter(Boolean).map(L=>{ const a=L.split(','); return {addr:a[0]?.trim()||'', price:+(a[1]||0), area:+(a[2]||0), memo:(a[3]||'').trim()};});}
+function appendCSV(rows){ const ta=$("#csv"); ta.value += rows.map(r=>`${r.addr}, ${r.price}, ${r.area}${r.memo?`, ${r.memo}`:''}`).join('\n')+'\n';}
+function saveJSON(k,obj){ localStorage.setItem(k, JSON.stringify(obj)); }
+function loadJSON(k,d){ try{ return JSON.parse(localStorage.getItem(k)||'null') ?? d; }catch{ return d; }}
 
-// ——— タップ診断 HUD
-let diag=false;document.getElementById('tapDiagToggle').onclick=()=>{diag=!diag;document.getElementById('tapDiagToggle').textContent='タップ診断:'+(diag?'ON':'OFF');};
-window.addEventListener('pointerdown',e=>{if(!diag)return;const c=document.getElementById('tapHud');const x=e.clientX,y=e.clientY;const ctx=c.getContext('2d');c.width=innerWidth;c.height=innerHeight;ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='rgba(255,0,0,.25)';ctx.beginPath();ctx.arc(x,y,40,0,Math.PI*2);ctx.fill();});
-
-// ——— カメラ/ステージング基本
-const vid=document.getElementById('vid');const stage=document.getElementById('stage');const sctx=stage.getContext('2d');let bgImg=null;let items=[];let picking=false;let pickPts=[];
-function drawStage(){sctx.clearRect(0,0,stage.width,stage.height); if(bgImg) sctx.drawImage(bgImg,0,0,stage.width,stage.height); items.forEach(it=>{sctx.save(); sctx.translate(it.x,it.y); sctx.rotate(it.roll*Math.PI/180); const sc=it.scale/100; sctx.scale(sc,sc); // 擬似Yaw/Pitch: 2D 変換
- sctx.transform(1,0.0, Math.tan((-it.yaw)*Math.PI/180)*0.2, 1+ (it.pitch/90)*0.1, 0,0);
- sctx.drawImage(it.img,-it.w/2,-it.h/2,it.w,it.h); sctx.restore();});
- if(picking && pickPts.length){sctx.fillStyle='rgba(255,255,0,.8)'; pickPts.forEach(p=>{sctx.beginPath(); sctx.arc(p.x,p.y,6,0,Math.PI*2); sctx.fill();});}
- requestAnimationFrame(drawStage);} requestAnimationFrame(drawStage);
-
-function fitCanvasTo(img){const r=img.width/img.height;stage.width=1280;stage.height=1280/r;}
-
-document.getElementById('file').onchange=e=>{const f=e.target.files[0];if(!f)return;const img=new Image();img.onload=()=>{bgImg=img;fitCanvasTo(img)};img.src=URL.createObjectURL(f)}
-
-document.getElementById('camStart').onclick=async()=>{const st=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});vid.srcObject=st;}
-
-document.getElementById('snap').onclick=()=>{if(!vid.srcObject){alert('カメラを起動してください');return;} const c=document.createElement('canvas');c.width=vid.videoWidth;c.height=vid.videoHeight; c.getContext('2d').drawImage(vid,0,0); const img=new Image(); img.onload=()=>{bgImg=img;fitCanvasTo(img)}; img.src=c.toDataURL('image/jpeg');}
-
-// ——— 家具（ダミー画像）
-function makeDummy(color){const c=document.createElement('canvas');c.width=380;c.height=220;const x=c.getContext('2d');x.fillStyle=color;x.fillRect(0,0,c.width,c.height);x.fillStyle='rgba(255,255,255,.15)';x.fillRect(0,0,c.width,40);x.fillStyle='#fff';x.font='20px sans-serif';x.fillText('家具(写真素材差替え可)',18,28);const i=new Image();i.src=c.toDataURL();return i}
-const sofaImg=makeDummy('#3b66ff'); const plantImg=makeDummy('#2e8b57');
-function addItem(img){items.push({img,w:340,h:200,x:stage.width*0.3+Math.random()*100,y:stage.height*0.75+Math.random()*50,roll:0,yaw:0,pitch:0,scale:100});}
-
-document.getElementById('addSofa').onclick=()=>addItem(sofaImg);
- document.getElementById('addPlant').onclick=()=>addItem(plantImg);
-
-// 360°操作のスライダを選択中アイテムに反映
-let active=null; stage.addEventListener('pointerdown',e=>{const r=stage.getBoundingClientRect(); const x=e.clientX-r.left,y=e.clientY-r.top; active=null; for(let i=items.length-1;i>=0;i--){const it=items[i]; if(Math.abs(x-it.x)<it.w/2 && Math.abs(y-it.y)<it.h/2){active=it; break;}}
- if(!active && picking){pickPts.push({x,y}); if(pickPts.length===2){picking=false; alert('基準2点を取得。基準長さ(m)を用いてスケール確定。');}}
+// ====== タブ制御 ======
+const tabs=$$('[data-tab]'); const secMap={stage:$('#tab-stage'),floor:$('#tab-floor'),noise:$('#tab-noise'),rank:$('#tab-rank'),loan:$('#tab-loan'),inspect:$('#tab-inspect'),finance:$('#tab-finance')};
+tabs.forEach(b=>b.addEventListener('click',()=>{
+  tabs.forEach(x=>x.classList.remove('primary')); b.classList.add('primary');
+  Object.values(secMap).forEach(s=>s.hidden=true); secMap[b.dataset.tab].hidden=false;
+}));
+$('#saveAll').addEventListener('click',()=>{
+  const pack={
+    stage: {}, floor: {scale:+$('#scaleVal').value, poly:PLAN.points},
+    noise: {}, rank:{csv:$('#csv').value}, loan: {txt:$('#loanInput').value},
+    inspect:{log:INSPECT.rows}, finance:{
+      price:+$('#vPrice').value,floor:+$('#vFloor').value,age:+$('#vAge').value,struct:$('#vStruct').value,
+      rent:+$('#vRent').value,occ:+$('#vOcc').value,fixed:+$('#vFixed').value,opex:+$('#vOpex').value,
+      debt:+$('#vDebt').value,rate:+$('#vRate').value,years:+$('#vYears').value
+    }
+  }; saveJSON('suite_v87',pack); alert('保存しました');});
+$('#loadAll').addEventListener('click',()=>{
+  const p=loadJSON('suite_v87'); if(!p) return alert('保存データなし');
+  $('#csv').value=p.rank?.csv||''; INSPECT.rows=p.inspect?.log||[]; renderInspect();
+  $('#scaleVal').value=p.floor?.scale||0; PLAN.points=p.floor?.poly||[]; PLAN.draw();
+  const f=p.finance||{}; $('#vPrice').value=f.price||3000; $('#vFloor').value=f.floor||80; $('#vAge').value=f.age||20;
+  $('#vStruct').value=f.struct||'木造'; $('#vRent').value=f.rent||12; $('#vOcc').value=f.occ||95; $('#vFixed').value=f.fixed||20;
+  $('#vOpex').value=f.opex||25; $('#vDebt').value=f.debt||2400; $('#vRate').value=f.rate||2.0; $('#vYears').value=f.years||25;
+  alert('復元しました');
 });
-stage.addEventListener('pointermove',e=>{if(!active)return; if(e.buttons!==1)return; const r=stage.getBoundingClientRect(); active.x=e.clientX-r.left; active.y=e.clientY-r.top;});
-stage.addEventListener('dblclick',()=>{if(active){items=items.filter(i=>i!==active);active=null;}});
 
-function bindCtrl(id,prop){document.getElementById(id).addEventListener('input',e=>{if(active){active[prop]=Number(e.target.value);}});} ['yaw','pitch','roll','scale'].forEach(k=>bindCtrl(k,k));
-
-// 自動配置（下 40% に貪欲配置）
-document.getElementById('autoPlace').onclick=()=>{const floorY=stage.height*0.6; const lanes=[0.15,0.35,0.55,0.75,0.85]; items.forEach((it,i)=>{it.y=floorY+ (i%2)*60 + 30; it.x=stage.width*lanes[i%lanes.length];});};
-
-document.getElementById('clearItems').onclick=()=>{items=[]};
-
-document.getElementById('pick2').onclick=()=>{pickPts=[]; picking=true;};
-
-// ——— 騒音解析
-let audio,analyser,dataArray,waveArray; const wave=document.getElementById('wave'), wctx=wave.getContext('2d'); const spec=document.getElementById('spec'), sctx2=spec.getContext('2d');
-let specX=0; function drawWave(){if(!analyser)return; analyser.getFloatTimeDomainData(waveArray); wctx.fillStyle='#000'; wctx.fillRect(0,0,wave.width,wave.height); wctx.strokeStyle='#29b6f6'; wctx.beginPath(); const g=Number(document.getElementById('gain').value); for(let i=0;i<waveArray.length;i++){const y=(0.5+waveArray[i]*g)*wave.height; if(i===0) wctx.moveTo(0,y); else wctx.lineTo(i/waveArray.length*wave.width,y);} wctx.stroke(); requestAnimationFrame(drawWave);}
-function drawSpec(){if(!analyser)return; const N=analyser.frequencyBinCount; if(!dataArray||dataArray.length!==N) dataArray=new Uint8Array(N); analyser.getByteFrequencyData(dataArray); // 0-255
- const h=spec.height; const w=spec.width; for(let y=0;y<h;y++){const bin=Math.floor((y/h)*N); const v=dataArray[bin]; sctx2.fillStyle=`hsl(${240-(v/255)*240}, 90%, ${(40+v/3)}%)`; sctx2.fillRect(specX,y,1,1);} specX=(specX+1)%w; requestAnimationFrame(drawSpec);}
-
-async function startMic(){audio=await navigator.mediaDevices.getUserMedia({audio:true}); const ac=new (window.AudioContext||window.webkitAudioContext)(); const src=ac.createMediaStreamSource(audio); analyser=ac.createAnalyser(); analyser.fftSize=2048; waveArray=new Float32Array(analyser.fftSize); src.connect(analyser); drawWave(); drawSpec(); // 簡易ホログラフィ準備
- const v=document.getElementById('vNoise');const hol=document.getElementById('holo');const hctx=hol.getContext('2d'); const vs=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false}); v.srcObject=vs; const tmp=document.createElement('canvas'); const tctx=tmp.getContext('2d'); let last=null; (function loop(){ if(!analyser)return; tmp.width=v.videoWidth||320; tmp.height=v.videoHeight||180; hol.width=tmp.width; hol.height=tmp.height; tctx.drawImage(v,0,0,tmp.width,tmp.height); const fr=tctx.getImageData(0,0,tmp.width,tmp.height); hctx.drawImage(v,0,0,hol.width,hol.height); if(last){ let sum=0; for(let i=0;i<fr.data.length;i+=4){const d=Math.abs(fr.data[i]-last.data[i])+Math.abs(fr.data[i+1]-last.data[i+1])+Math.abs(fr.data[i+2]-last.data[i+2]); sum+=d; const m=d>60?1:0; fr.data[i]=255*m; fr.data[i+1]=0; fr.data[i+2]=0; fr.data[i+3]=80*m; }
- const N=analyser.frequencyBinCount; const band = new Uint8Array(N); analyser.getByteFrequencyData(band); const loud = band.slice(N*0.1,N*0.3).reduce((a,b)=>a+b,0)/ (N*0.2); const alpha=Math.min(1, loud/120); hctx.putImageData(fr,0,0); hctx.fillStyle=`rgba(255,0,0,${0.25+alpha*0.5})`; hctx.fillRect(0,0,hol.width,hol.height); } last=fr; requestAnimationFrame(loop); })(); }
-
-document.getElementById('micStart').onclick=startMic; document.getElementById('micStop').onclick=()=>{analyser=null; if(audio) audio.getTracks().forEach(t=>t.stop());};
-
-// ——— 住所 → 路線価（多段フェイルオーバ）
-async function reverseGeocode(lat,lon){const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,{headers:{'Accept-Language':'ja'}});const j=await r.json();return j.display_name||''}
-document.getElementById('addrGps').onclick=()=>{navigator.geolocation.getCurrentPosition(async p=>{const {latitude,longitude}=p.coords; const a=await reverseGeocode(latitude,longitude); document.getElementById('addr').value=a;},err=>alert('位置情報が許可されていません'))};
-
-const sampleCSV=`pref,city,ward,rosen_kr,koji,deal\n東京,渋谷区,,1200,1500,1600\n東京,新宿区,,900,1300,1400\n大阪,北区,,700,1000,1100`;
-function CSVtoMap(csv){const lines=csv.trim().split(/\n/); const h=lines.shift().split(','); return lines.map(L=>{const v=L.split(','); const o={}; h.forEach((k,i)=>o[k]=v[i]); return o;});}
-async function fetchAllOrigins(url){try{const r=await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`); return await r.text();}catch(e){return null}}
-
-document.getElementById('fetchLand').onclick=async()=>{
-  const msg=document.getElementById('landMsg'); msg.textContent='自動取得を試行中…';
-  // デモ：CSVフォールバック（住所以外はサンプルで近似）
-  const rows=CSVtoMap(sampleCSV); const hit=rows[0]; document.getElementById('rosen').value=hit.rosen_kr; document.getElementById('koji').value=hit.koji; document.getElementById('deal').value=hit.deal; msg.textContent='サンプル値で充填（実APIはCORS状況により回避動作）';
-};
-
-document.getElementById('avg3').onclick=()=>{const a=Number(document.getElementById('rosen').value||0);const b=Number(document.getElementById('koji').value||0);const c=Number(document.getElementById('deal').value||0);const n=[a,b,c].filter(x=>x>0).length; document.getElementById('avg').value = n? Math.round((a+b+c)/n):0; }
-
-// ——— 収支/DSCR
-function recalc(){const rent=Number(document.getElementById('rent').value||0);const occ=Number(document.getElementById('occ').value||0);
- const fx= ['fxInsurance','fxElectric','fxNet','fxClean'].map(id=>Number(document.getElementById(id).value||0)).reduce((a,b)=>a+b,0);
- const exRate=['exMgmt','exRepair','exAd','exOther'].map(id=>Number(document.getElementById(id).value||0)).reduce((a,b)=>a+b,0);
- const income=rent*12*occ; const ex= income*exRate + fx; const NOI=income-ex;
- const loan=Number(document.getElementById('loan').value||0); const rate=Number(document.getElementById('rate').value||0); const years=Number(document.getElementById('years').value||0);
- const r=rate/12; const n=years*12; const pay= r? Math.round(loan * r * Math.pow(1+r,n) / (Math.pow(1+r,n)-1))*12 : loan/years; const DSCR = NOI>0? (NOI/pay):0;
- document.getElementById('financeOut').innerHTML=`NOI: ${NOI.toLocaleString()} / 年返済: ${pay.toLocaleString()} / <b>DSCR: ${DSCR.toFixed(2)}</b>`;}
-
-document.getElementById('calcFinance').onclick=recalc; document.getElementById('agePreset').onchange=e=>{const p=Number(e.target.value); const presets=[{mg:0.04,rp:0.03,ad:0.015,ot:0.015,fx:[10000,12000,12000,10000]},{mg:0.05,rp:0.05,ad:0.02,ot:0.02,fx:[12000,16000,12000,12000]},{mg:0.06,rp:0.07,ad:0.02,ot:0.02,fx:[14000,18000,12000,12000]},{mg:0.06,rp:0.09,ad:0.03,ot:0.03,fx:[16000,20000,12000,16000]}]; const v=presets[p]; document.getElementById('exMgmt').value=v.mg;document.getElementById('exRepair').value=v.rp;document.getElementById('exAd').value=v.ad;document.getElementById('exOther').value=v.ot; ['fxInsura
+// ====== ① ステージング ======
+const STAGE={img:null, furn:[], dragging:null, scale:1};
+const stageCanvas=$("#stageCanvas"), sctx=stageCanvas.getContext('2d');
+const overCanvas=$("#overCanvas"), octx=overCanvas.getContext('2d');
+function drawStage(){
+  sctx.clearRect(0,0,stageCanvas.width,stageCanvas.height);
+  if(STAGE.img) sctx.drawImage(STAGE.img,0,0,stageCanvas.width,stageCanvas.height);
+  STAGE.furn.forEach(f=>{
+    sctx.save();
+    sctx.translate(f.x,f.y); sctx.scale(f.size,f.size); sctx.rotate(f.yaw*Math.PI/180*0.1); // 軽い擬似3D
+    proceduralFurniture(sctx,f.type); sctx.restore();
+  });
+}
+function proceduralFurniture(ctx,type){
+  ctx.save();
+  if(type==='sofa'){ // ダークソファ風
+    ctx.fillStyle='#222'; ctx.strokeStyle='#555'; ctx.lineWidth=2;
+    ctx.fillRect(-80,-30,160,60); ctx.strokeRect(-80,-30,160,60);
+    ctx.fillStyle='#2b2b2b'; ctx.fillRect(-70,-10,60,20); ctx.fillRect(10,-10,60,20);
+  }else if(type==='table'){
+    ctx.fillStyle='#5a3e2b'; ctx.fillRect(-70,-15,140,30);
+    ctx.fillStyle='#3a2518'; ctx.fillRect(-60,15,10,20); ctx.fillRect(50,15,10,20);
+  }else if(type==='bed'){
+    ctx.fillStyle='#ddd'; ctx.fillRect(-90,-30,180,60);
+    ctx.fillStyle='#bbb'; ctx.fillRect(-90,-30,180,20);
+  }else if(type==='plant'){
+    ctx.fillStyle='#2f8a3b'; ctx.beginPath(); ctx.arc(0,-20,25,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#6b4b2a'; ctx.fillRect(-10,0,20,14);
+  }
+  ctx.restore();
+}
+function addFurniture(type,x,y){ STAGE.furn.push({type,x,y,yaw:+$('#yaw').value,size:1}); drawStage(); }
+stageCanvas.addEventListener('pointerdown',e=>{
+  const rect=stageCanvas.getBoundingClientRect(); const x=e.clientX-rect.left, y=e.clientY-rect.top;
+  // ヒットテスト粗
+  for(let i=STAGE.furn.length-1;i>=0;i--){ const f=STAGE.furn[i]; if(Math.hypot(f.x-x,f.y-y)<60*f.size){ STAGE.dragging={i,dx:f.x-x,dy:f.y-y}; return; } }
+});
+stageCanvas.addEventListener('pointermove',e=>{
+  if(!STAGE.dragging) return; const rect=stageCanvas.getBoundingClientRect();
+  const x=e.clientX-rect.left, y=e.clientY-rect.top; const f=STAGE.furn[STAGE.dragging.i]; f.x=x+STAGE.dragging.dx; f.y=y+STAGE.dragging.dy; drawStage();
+});
+stageCanvas.addEventListener('pointerup',()=>STAGE.dragging=null);
+stageCanvas.addEventListener('wheel',e=>{ if(!STAGE
