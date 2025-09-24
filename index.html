@@ -2,460 +2,408 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no" />
-<title>不動産AIスイート v8.7-complete-12f（単一HTML/FILE-MODE対応）</title>
-<meta name="theme-color" content="#0f172a"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>不動産AIスイート v8.7-complete-07e (Single File)</title>
+<meta name="theme-color" content="#101827" />
 <style>
-/* =========================
-   不動産AIスイート 単一HTML 完全版
-   v8.7-complete-12f / 2025-09-24 JST
-   目的：HTMLのみコピペで最低限動作（FILE-MODE対応）
-   依存：なし（外部CDN不使用）
-   ========================= */
+  :root{
+    --bg:#0b1220; --card:#111827; --ink:#e5e7eb; --muted:#9ca3af; --acc:#60a5fa; --ok:#34d399; --warn:#f59e0b; --bad:#ef4444;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;background:var(--bg);color:var(--ink);font:14px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  a{color:var(--acc)}
+  .app{display:flex;flex-direction:column;height:100%;}
+  header{position:sticky;top:0;z-index:9999;background:linear-gradient(180deg,#0b1220,#0b1220dd);backdrop-filter:saturate(1.2) blur(8px);}
+  header .row{display:flex;align-items:center;gap:.75rem;padding:.75rem .9rem;border-bottom:1px solid #1f2937}
+  .title{font-weight:700;letter-spacing:.2px}
+  .badge{font-size:12px;color:#93c5fd;background:#1e293b;padding:.12rem .4rem;border-radius:.5rem;border:1px solid #334155}
+  .toolbar{display:flex;gap:.5rem;flex-wrap:wrap}
+  .btn{appearance:none;border:1px solid #334155;background:#0b1220;color:var(--ink);padding:.5rem .7rem;border-radius:.7rem}
+  .btn:hover{border-color:#475569}
+  .btn.primary{background:#1d4ed8;border-color:#3b82f6}
+  .btn.ghost{background:#111827}
+  .tabs{display:grid;grid-template-columns:repeat(6,1fr);border-bottom:1px solid #1f2937}
+  .tab{padding:.65rem .3rem;text-align:center;cursor:pointer;border-right:1px solid #1f2937}
+  .tab.active{background:#0f172a;color:#93c5fd;font-weight:600}
+  main{flex:1;overflow:auto;}
+  section{display:none;padding:1rem;}
+  section.active{display:block}
 
-/* ---- CSSリセット（簡易） ---- */
-*,*::before,*::after{box-sizing:border-box}
-html,body{margin:0;padding:0;height:100%;-webkit-tap-highlight-color:transparent}
-img,video,canvas{max-width:100%;height:auto;display:block}
-button,input,select,textarea{font:inherit}
-:root{
-  --bg:#0b1220;           /* slate-950近似 */
-  --panel:#0f172a;        /* slate-900 */
-  --panel-2:#111827;      /* gray-900 */
-  --ink:#e5e7eb;          /* gray-200 */
-  --muted:#9ca3af;        /* gray-400 */
-  --brand:#22d3ee;        /* cyan-400 */
-  --brand-2:#7dd3fc;      /* sky-300 */
-  --accent:#34d399;       /* emerald-400 */
-  --danger:#fb7185;       /* rose-400 */
-  --warn:#fbbf24;         /* amber-400 */
-  --ok:#86efac;           /* green-300 */
-  --card:#111827;
-  --chip:#1f2937;
-  --surface:#0b1327;
-  --shadow:0 10px 30px rgba(0,0,0,.35);
-  --radius:16px;
-  --radius-sm:12px;
-  --radius-xs:10px;
-}
-body{
-  background:linear-gradient(180deg,#0a0f1d 0%, #0b1327 100%);
-  color:var(--ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic UI", "Noto Sans CJK JP", "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-  line-height:1.45;
-  letter-spacing:.02em;
-}
+  /* cards */
+  .grid{display:grid;gap:1rem}
+  @media(min-width:960px){.grid.cols-2{grid-template-columns:1fr 1fr}}
+  .card{background:var(--card);border:1px solid #1f2937;border-radius:1rem;padding:1rem}
+  .card h3{margin:.2rem 0 .6rem 0}
+  .muted{color:var(--muted)}
+  .row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+  .row>.grow{flex:1}
+  input,select,textarea{width:100%;background:#0b1220;color:var(--ink);border:1px solid #374151;border-radius:.6rem;padding:.55rem .6rem}
+  textarea{min-height:120px}
+  .mini{font-size:12px;color:var(--muted)}
+  .pill{padding:.15rem .5rem;border:1px solid #334155;border-radius:999px}
 
-/* ---- レイアウト ---- */
-.app{
-  display:grid;
-  grid-template-rows:auto 1fr 64px;
-  min-height:100dvh;
-}
-.header{
-  position:sticky; top:0; z-index:10000; /* クリック可視化要件 */
-  background:rgba(15,23,42,.9);
-  backdrop-filter:saturate(140%) blur(8px);
-  border-bottom:1px solid rgba(255,255,255,.07);
-}
-.header-inner{
-  display:flex; align-items:center; gap:12px;
-  padding:12px 16px;
-}
-.logo{display:flex;align-items:center;gap:10px}
-.logo .dot{width:10px;height:10px;border-radius:999px;background:var(--brand);box-shadow:0 0 16px var(--brand)}
-.h1{font-weight:800; font-size:16px; letter-spacing:.03em}
-.badges{margin-left:auto;display:flex;gap:8px;align-items:center}
-.badge{border:1px solid rgba(255,255,255,.1);padding:4px 8px;border-radius:999px;font-size:12px;background:#0b1327}
-.badge.file{border-color:rgba(34,211,238,.35);color:#a5f3fc}
-.badge.err{border-color:rgba(251,113,133,.35);color:#fecaca}
-.badge.ok{border-color:rgba(52,211,153,.35);color:#bbf7d0}
+  /* bottom actions for thumb reach */
+  .dock{position:sticky;bottom:0;z-index:9998;background:linear-gradient(180deg,#0b1220cc,#0b1220);backdrop-filter:blur(10px);border-top:1px solid #1f2937;padding:.5rem}
+  .dock .row{justify-content:space-between}
 
-/* ---- コンテナ/カード ---- */
-.main{
-  padding:14px 14px 96px; /* bottom nav 分余白 */
-}
-.section{display:none; animation:fade .25s ease}
-.section.show{display:block}
-@keyframes fade{from{opacity:.0;transform:translateY(4px)}to{opacity:1;transform:none}}
+  /* Tap-Diag HUD */
+  #tapHud{position:fixed;inset:0;pointer-events:none;background:transparent;z-index:10000}
+  .hud-on{outline:2px dashed #ef4444;outline-offset:-2px}
+  #toast{position:fixed;right:.8rem;bottom:5.6rem;background:#111827;border:1px solid #374151;padding:.6rem .8rem;border-radius:.7rem;z-index:10001;display:none}
 
-.card{
-  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01));
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-}
-.card .hd{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:10px}
-.card .bd{padding:14px 16px}
-.card .ft{padding:10px 16px;border-top:1px solid rgba(255,255,255,.06);display:flex;gap:10px;flex-wrap:wrap}
+  /* Chat */
+  .chat{display:flex;flex-direction:column;height:100%;gap:.6rem}
+  .chatlog{flex:1;overflow:auto;display:flex;flex-direction:column;gap:.5rem}
+  .bubble{max-width:86%;padding:.55rem .7rem;border-radius:1rem}
+  .ai{align-self:flex-start;background:#0f172a;border:1px solid #1f2937}
+  .me{align-self:flex-end;background:#1f2937}
+  .quick{display:flex;gap:.4rem;flex-wrap:wrap}
 
-/* ---- フォーム/ボタン ---- */
-.row{display:flex; gap:10px; flex-wrap:wrap}
-.col{flex:1 1 240px; min-width:200px}
-label{display:block; font-size:12px; color:var(--muted); margin:2px 2px 6px}
-input[type="text"],input[type="number"],textarea,select{
-  width:100%; padding:10px 12px; color:var(--ink); background:#0b1327;
-  border:1px solid rgba(255,255,255,.08); border-radius:var(--radius-sm);
-  outline:none; transition:.15s border, .15s box-shadow;
-}
-textarea{min-height:120px; resize:vertical}
-input:focus,textarea:focus,select:focus{border-color:rgba(125,211,252,.35); box-shadow:0 0 0 3px rgba(125,211,252,.15)}
-.btn{
-  appearance:none; border:1px solid rgba(255,255,255,.12); background:#0f172a;
-  color:var(--ink); padding:10px 14px; border-radius:14px; cursor:pointer; transition:.15s transform,.15s background,.15s border;
-}
-.btn:hover{transform:translateY(-1px)}
-.btn:active{transform:translateY(0)}
-.btn.primary{background:linear-gradient(180deg,#08b9d6,#0891b2);border-color:rgba(8,145,178,.6)}
-.btn.ghost{background:transparent}
-.btn.warn{background:#1f2937; border-color:rgba(251,191,36,.5); color:#fde68a}
-.btn.danger{background:#1f2937; border-color:rgba(251,113,133,.55); color:#fecdd3}
-.btn.ok{background:#1f2937; border-color:rgba(52,211,153,.55); color:#bbf7d0}
-.btn.small{padding:8px 10px;border-radius:10px;font-size:12px}
+  /* Staging */
+  #stageWrap{position:relative;min-height:260px;background:#0b1220;border:1px dashed #374151;border-radius:1rem;overflow:hidden}
+  #scene{width:100%;height:100%;object-fit:contain}
+  #furn{position:absolute;left:40%;top:55%;width:120px;touch-action:none;cursor:grab}
 
-/* ---- 下部ナビ（親指優先） ---- */
-.nav{
-  position:sticky; bottom:0; z-index:9999; /* クリック系は最前面 */
-  background:rgba(15,23,42,.96); backdrop-filter:saturate(140%) blur(10px);
-  border-top:1px solid rgba(255,255,255,.08);
-  display:grid; grid-template-columns: repeat(6, 1fr);
-}
-.nav button{
-  padding:10px 6px; background:transparent; border:none; color:var(--muted); font-size:11px;
-  display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:center; min-height:64px; cursor:pointer
-}
-.nav button.active{color:var(--brand); text-shadow:0 0 18px rgba(34,211,238,.3)}
-.ico{width:18px;height:18px; display:inline-block; border-radius:6px; background:linear-gradient(180deg,rgba(34,211,238,.85),rgba(125,211,252,.75))}
+  /* Noise */
+  #wave,#spec{width:100%;height:140px;background:#0b1220;border:1px solid #1f2937;border-radius:.6rem}
+  #camWrap{position:relative}
+  #cam{width:100%;border-radius:.6rem}
+  #heat{position:absolute;inset:0;pointer-events:none}
 
-/* ---- チップ/タグ ---- */
-.chips{display:flex; gap:8px; flex-wrap:wrap}
-.chip{
-  background:var(--chip); border:1px solid rgba(255,255,255,.08); color:#cbd5e1;
-  padding:8px 10px; border-radius:999px; font-size:12px; display:inline-flex; gap:8px; align-items:center
-}
+  /* Table */
+  table{width:100%;border-collapse:collapse}
+  th,td{border-bottom:1px solid #1f2937;padding:.5rem;text-align:left}
+  tr.dim{opacity:.45}
 
-/* ---- 表 ---- */
-.table{
-  width:100%; border-collapse:separate; border-spacing:0; overflow:auto; border-radius:var(--radius); border:1px solid rgba(255,255,255,.08)
-}
-.table th,.table td{ padding:10px 12px; text-align:left; border-bottom:1px solid rgba(255,255,255,.06) }
-.table th{font-weight:700; font-size:12px; color:#cbd5e1; background:#0f182c}
-.table tr:hover td{background:rgba(255,255,255,.02)}
-.table .muted{color:var(--muted); font-size:12px}
+  /* YT Dock */
+  #ytDock{position:fixed;left:0;right:0;bottom:0;height:110px;background:#0b1220cc;backdrop-filter:blur(6px);border-top:1px solid #1f2937;display:none;z-index:9997}
+  #ytDock .rail{display:flex;gap:.6rem;overflow:auto;padding:.4rem}
+  .ytChip{min-width:176px;height:99px;border-radius:.5rem;overflow:hidden;border:1px solid #1f2937}
 
-/* ---- ヘルプHUD/トースト ---- */
-.hud{
-  position:fixed; right:16px; bottom:84px; z-index:10001; display:flex; flex-direction:column; gap:10px; max-width:min(420px,90vw)
-}
-.toast{
-  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04));
-  border:1px solid rgba(255,255,255,.14);
-  backdrop-filter:blur(8px) saturate(140%);
-  padding:10px 12px; border-radius:14px; box-shadow:var(--shadow); font-size:13px
-}
-.toast.warn{border-color:rgba(251,191,36,.45)}
-.toast.err{border-color:rgba(251,113,133,.5)}
-.toast.ok{border-color:rgba(52,211,153,.5)}
-
-/* ---- Tap-Diag（クリック殺し検出HUD） ---- */
-.tapdiag{
-  position:fixed; inset:0; z-index:10002; display:none; pointer-events:none; /* 可視化のみ */
-}
-.tapdiag.show{display:block}
-.tapdiag canvas{width:100%; height:100%}
-.tapdiag .panel{
-  position:fixed; left:10px; bottom:90px; background:#0b1327; border:1px solid rgba(255,255,255,.15);
-  border-radius:14px; padding:10px 12px; font-size:12px; color:#e5e7eb; pointer-events:auto
-}
-
-/* ---- YouTube Dock（最下部横スクロール帯） ---- */
-.ytdock{
-  position:fixed; left:0; right:0; bottom:64px; z-index:8888; display:none;
-  background:linear-gradient(180deg, rgba(15,23,42,.0), rgba(15,23,42,.96) 28%, rgba(15,23,42,.96));
-  border-top:1px solid rgba(255,255,255,.06);
-  padding:10px 10px 8px;
-}
-.ytdock.show{display:block}
-.ytrow{display:flex; gap:10px; overflow:auto; scrollbar-width:thin; padding-bottom:6px}
-.ytchip{
-  flex:0 0 176px; height:99px; border-radius:12px; overflow:hidden; position:relative; background:#111827; border:1px solid rgba(255,255,255,.08)
-}
-.ytchip img{width:100%; height:100%; object-fit:cover}
-.ytchip .ttl{
-  position:absolute; left:0; right:0; bottom:0; padding:6px 8px; font-size:11px; color:#e5e7eb;
-  background:linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.6))
-}
-.yt-toggle{
-  position:fixed; right:12px; bottom:70px; z-index:8890; border-radius:999px; padding:10px 12px
-}
-
-/* ---- 小パーツ ---- */
-.kbd{font-size:11px; padding:2px 6px; border-radius:8px; border:1px solid rgba(255,255,255,.14); background:#0b1327; color:#cbd5e1}
-.help{font-size:12px; color:var(--muted)}
-.hr{height:1px; background:linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); margin:10px 0}
-
-/* ---- チャット（簡易） ---- */
-.chat{
-  display:flex; flex-direction:column; gap:10px
-}
-.msg{display:flex; gap:10px}
-.msg .bubble{
-  max-width:85%; padding:10px 12px; border-radius:14px; border:1px solid rgba(255,255,255,.09);
-  background:#0e1729
-}
-.msg.me{justify-content:flex-end}
-.msg.me .bubble{background:#0b2a2f; border-color:rgba(34,211,238,.25)}
-.chat-input{display:flex; gap:8px; align-items:center}
-.chat-input input{flex:1}
-
-/* ---- 画像ステージング ---- */
-.stage{
-  position:relative; width:100%; min-height:260px; background:#0c1426; border:1px dashed rgba(255,255,255,.15); border-radius:16px; overflow:hidden
-}
-.stage img.bg{position:absolute; inset:0; width:100%; height:100%; object-fit:contain}
-.furn{position:absolute; border:1px solid rgba(125,211,252,.6); border-radius:10px; background:rgba(125,211,252,.15); box-shadow:0 6px 20px rgba(0,0,0,.35); backdrop-filter:blur(2px)}
-.furn .handle{position:absolute; right:4px; bottom:4px; width:16px; height:16px; border-radius:4px; background:rgba(34,211,238,.8)}
-.furn .ttl{position:absolute; left:6px; top:4px; font-size:11px; background:rgba(0,0,0,.4); padding:2px 6px; border-radius:999px}
-
-/* ---- スペクトログラム ---- */
-.specwrap{display:grid; gap:10px}
-#specCanvas{width:100%; height:180px; background:#0b1327; border-radius:12px; border:1px solid rgba(255,255,255,.08)}
-
-/* ---- アクセシビリティ/タップ修正 ---- */
-button, a, input, select, textarea { touch-action: manipulation; }
-@media (pointer:coarse){
-  .btn{min-height:44px}
-  .nav button{min-height:64px}
-}
+  .hide{display:none}
 </style>
 </head>
 <body>
 <div class="app">
-
-  <!-- ================= Header ================= -->
-  <header class="header">
-    <div class="header-inner">
-      <div class="logo"><span class="dot"></span><div class="h1">不動産AIスイート <span class="help">v8.7-complete-12f</span></div></div>
-      <div class="badges">
-        <span id="fileBadge" class="badge file" style="display:none">FILE-MODE</span>
-        <span id="swBadge" class="badge ok" style="display:none">SW ON</span>
-        <span id="errBadge" class="badge err" style="display:none">ERR</span>
-        <button id="btnTapDiag" class="btn small ghost" title="Tap-Diag HUD（クリック殺し可視化）">Tap-Diag</button>
-        <button id="btnChecklist" class="btn small ghost" title="E2Eチェックリスト">E2E</button>
+  <header>
+    <div class="row">
+      <div class="title">不動産AIスイート <span class="badge">v8.7-complete-07e</span></div>
+      <div class="grow"></div>
+      <div class="toolbar">
+        <button class="btn" id="btnHud">Tap-Diag HUD</button>
+        <button class="btn" id="btnSave">保存</button>
+        <button class="btn" id="btnLoad">読込</button>
       </div>
+    </div>
+    <div class="tabs" id="tabs">
+      <div class="tab active" data-tab="chat">チャット</div>
+      <div class="tab" data-tab="rank">ランキング</div>
+      <div class="tab" data-tab="stage">ステージング</div>
+      <div class="tab" data-tab="noise">騒音</div>
+      <div class="tab" data-tab="inspect">内見</div>
+      <div class="tab" data-tab="finance">評価/資金</div>
     </div>
   </header>
 
-  <!-- ================= Main ================= -->
-  <main class="main" id="main">
-
-    <!-- ===== Chat / Home ===== -->
-    <section id="sec-chat" class="section show">
-      <div class="card">
-        <div class="hd">
-          <span class="ico"></span><b>会話（ホーム）</b>
-          <span class="help">GUIと同期するコマンド：<span class="kbd">駅=藤枝</span> <span class="kbd">路≥0.85</span> <span class="kbd">徒歩≤10</span> …</span>
+  <main>
+    <!-- Chat -->
+    <section id="chat" class="active">
+      <div class="grid cols-2">
+        <div class="card chat">
+          <div class="chatlog" id="chatlog"></div>
+          <div class="quick" id="quick">
+            <button class="btn pill" data-cmd="駅=藤枝">駅=藤枝</button>
+            <button class="btn pill" data-cmd="路≥0.8">路≥0.8</button>
+            <button class="btn pill" data-cmd="徒歩≤10">徒歩≤10</button>
+            <button class="btn pill" data-cmd="ランキング生成">ランキング生成</button>
+          </div>
+          <div class="row">
+            <input id="chatInput" placeholder="メッセージ / コマンド (例: 駅=藤枝, 路≥0.85, 徒歩≤10)"/>
+            <button class="btn primary" id="send">送信</button>
+          </div>
         </div>
-        <div class="bd">
-          <div id="chat" class="chat" aria-live="polite">
-            <!-- messages injected here -->
-          </div>
-          <div class="hr"></div>
-          <div class="chat-input">
-            <input id="chatInput" type="text" placeholder="例）ランキング生成 / 住所から取得 / ステージング開始 / DSCR計算" />
-            <button class="btn primary" id="chatSend">送信</button>
-            <button class="btn ghost" id="chatQuick">提案</button>
-          </div>
-          <div class="help">問題時は代替導線を自動提案（Zero Dead-End）。巻き戻りバグは v12f で根治：状態は <span class="kbd">localStorage</span> に冪等保存。</div>
+        <div class="card">
+          <h3>状態</h3>
+          <div id="state" class="mini"></div>
+          <h3>ヒント</h3>
+          <div class="mini">失敗時でも最短導線を提示（Zero Dead-End）。貼付/CSV/手入力にいつでも切替できます。</div>
         </div>
       </div>
     </section>
 
-    <!-- ===== Ranking / Land-Value Finder ===== -->
-    <section id="sec-rank" class="section">
-      <div class="card">
-        <div class="hd"><span class="ico"></span><b>ランキング（路線価/公示/成約 3×3 + 土地値比率）</b></div>
-        <div class="bd">
+    <!-- Ranking -->
+    <section id="rank">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>貼付HTML → 抽出プレビュー</h3>
+          <textarea id="htmlSrc" placeholder="物件一覧ページのHTMLをそのまま貼り付け"></textarea>
           <div class="row">
-            <div class="col">
-              <label>一覧ページHTMLを貼付 → プレビュー</label>
-              <textarea id="rankHtml" placeholder="不動産ポータルの一覧HTMLをまるごと貼付..."></textarea>
-              <div class="ft">
-                <button class="btn" id="btnRankPreview">プレビュー</button>
-                <button class="btn ok" id="btnRankApply" disabled>CSVへ反映</button>
-                <button class="btn ghost" id="btnRankSample">サンプル追加</button>
-              </div>
-              <div id="rankPreviewWrap" class="help"></div>
-            </div>
-            <div class="col">
-              <label>駅名（任意）</label>
-              <input id="rankStation" type="text" placeholder="例）藤枝 / 渋谷 / 三ノ宮 ..." />
-              <label>徒歩上限（分）</label>
-              <input id="rankWalk" type="number" value="15" min="1" />
-              <label>土地値比率しきい値（既定=0.8）</label>
-              <input id="rankLandRatio" type="number" value="0.8" step="0.05" min="0" max="2" />
-              <div class="ft">
-                <button class="btn primary" id="btnRankGen">ランキング生成</button>
-                <button class="btn ghost" id="btnRankClear">クリア</button>
-              </div>
-              <div class="help">3×3取得はFILE-MODEで**代表点CSV**に自動フォールバック。オンライン時はAPI/プロキシの順に試行（CORS配慮）。</div>
-            </div>
+            <button class="btn" id="btnPreview">プレビュー</button>
+            <button class="btn" id="btnApply" disabled>CSVへ反映</button>
+            <span class="mini" id="extractHint"></span>
           </div>
-          <div class="hr"></div>
-          <div class="chips">
-            <span class="chip">路線価比率≥<b id="chipRatio">0.8</b></span>
-            <span class="chip">Top10</span>
-            <span class="chip">エビデンス3×3</span>
+          <div class="mini">対応：住所/価格(万)/土地面積(m²) を抽出。失敗時は汎用正規表現にフォールバック。</div>
+          <div class="card" style="margin-top:.6rem">
+            <h3>プレビュー</h3>
+            <table id="prevTbl"><thead><tr><th>#</th><th>住所</th><th>価格(万)</th><th>土地(m²)</th></tr></thead><tbody></tbody></table>
           </div>
-          <div class="hr"></div>
-          <div style="overflow:auto">
-            <table class="table" id="rankTable" aria-label="ランキング結果">
-              <thead>
-                <tr>
-                  <th>#</th><th>住所</th><th>価格(万円)</th><th>土地(m²)</th><th>延床(m²)</th><th>構造</th>
-                  <th>V_est(万円)</th><th>乖離率</th><th>土地値比率</th><th>駅分</th><th>URL</th><th>証拠</th>
-                </tr>
-              </thead>
-              <tbody id="rankTbody"></tbody>
-            </table>
+        </div>
+        <div class="card">
+          <h3>検索条件</h3>
+          <div class="row">
+            <div class="grow"><label class="mini">駅名</label><input id="station" placeholder="例: 藤枝"/></div>
+            <div><label class="mini">徒歩上限(分)</label><input id="walkMax" type="number" value="10" style="width:100px"/></div>
+          </div>
+          <div class="row">
+            <div><label class="mini">土地値比率しきい</label><input id="landRatioMin" type="number" step="0.05" value="0.8" style="width:120px"/></div>
+            <div class="grow"></div>
+            <button class="btn primary" id="btnRank">ランキング生成</button>
+          </div>
+          <div class="mini">しきい未満は薄表示。Evidenceは行クリックで展開。</div>
+          <div class="card" style="margin-top:.6rem">
+            <h3>ランキング</h3>
+            <table id="rankTbl"><thead><tr><th>#</th><th>住所</th><th>価格(万)</th><th>V_est(万)</th><th>乖離率</th><th>土地値比率</th><th>URL</th></tr></thead><tbody></tbody></table>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== Staging ===== -->
-    <section id="sec-stage" class="section">
-      <div class="card">
-        <div class="hd"><span class="ico"></span><b>ステージング（自動配置 v1 + 360°近似UI）</b></div>
-        <div class="bd">
-          <div class="row">
-            <div class="col">
-              <label>部屋の画像</label>
-              <input id="stageImg" type="file" accept="image/*" />
-              <div class="ft">
-                <button class="btn primary" id="btnStageLoad">読み込む</button>
-                <button class="btn ok" id="btnStageAuto" disabled>自動配置</button>
-                <button class="btn ghost" id="btnStageClear">クリア</button>
-              </div>
-              <div class="help">自動配置v1：画像下40%を床候補→家具BBoxを貪欲配置（画面内100%/重なり最小）。二本指ピンチで拡大、ドラッグで移動、ダブルタップで削除。</div>
-            </div>
-            <div class="col">
-              <label>家具プリセット</label>
-              <div class="chips" id="furnChips">
-                <button class="chip" data-f="ソファ">ソファ</button>
-                <button class="chip" data-f="テーブル">テーブル</button>
-                <button class="chip" data-f="TVボード">TVボード</button>
-                <button class="chip" data-f="ベッド">ベッド</button>
-                <button class="chip" data-f="観葉">観葉</button>
-              </div>
-              <div class="ft">
-                <label class="help">角度(Yaw)</label>
-                <input id="yaw" type="range" min="0" max="345" step="15" value="0" />
-                <span class="help" id="yawVal">0°</span>
-              </div>
-            </div>
+    <!-- Staging -->
+    <section id="stage">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>部屋画像</h3>
+          <div id="stageWrap">
+            <img id="scene" alt="scene" />
+            <img id="furn" alt="furniture" />
           </div>
-          <div class="hr"></div>
-          <div id="stage" class="stage" aria-label="ステージングエリア">
-            <img id="stageBg" class="bg" alt="">
+          <div class="row" style="margin-top:.5rem">
+            <input type="file" id="roomFile" accept="image/*" capture="environment" />
+            <button class="btn" id="btnResetF">家具リセット</button>
+            <label class="mini">Yaw</label><input type="range" id="yaw" min="0" max="360" value="0" style="width:160px"/>
+          </div>
+        </div>
+        <div class="card">
+          <h3>自動配置 / 色温度</h3>
+          <div class="row">
+            <button class="btn" id="btnAutoPlace">床マスク→自動配置</button>
+            <button class="btn" id="btnColor">色温度あわせ</button>
+          </div>
+          <div class="mini">MVP: 下部40%を床候補にし、重なり最小で配置。将来はONNX Seg / MiDaSに差し替え可能な構成。</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Noise -->
+    <section id="noise">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>音の可視化</h3>
+          <div class="row">
+            <button class="btn" id="btnMic">マイク開始</button>
+            <button class="btn" id="btnStopMic">停止</button>
+            <label class="mini">dBレンジ</label><input type="range" id="dbRange" min="30" max="100" value="70" style="width:160px"/>
+          </div>
+          <canvas id="wave"></canvas>
+          <canvas id="spec" style="margin-top:.5rem"></canvas>
+        </div>
+        <div class="card">
+          <h3>カメラ+ヒートマップ（試作）</h3>
+          <div id="camWrap">
+            <video id="cam" playsinline muted autoplay></video>
+            <canvas id="heat"></canvas>
+          </div>
+          <div class="row" style="margin-top:.5rem">
+            <button class="btn" id="btnCam">カメラ開始</button>
+            <button class="btn" id="btnStopCam">停止</button>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- ===== Noise / Spectrogram ===== -->
-    <section id="sec-noise" class="section">
-      <div class="card">
-        <div class="hd"><span class="ico"></span><b>騒音（スペクトログラム + 擬似ホログラフィ）</b></div>
-        <div class="bd specwrap">
+    <!-- Inspection -->
+    <section id="inspect">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>チェックガイド</h3>
+          <details open>
+            <summary>1. 外観</summary>
+            <div class="row"><input type="file" accept="image/*,video/*" capture id="ex1"/></div>
+          </details>
+          <details>
+            <summary>2. 玄関</summary>
+            <div class="row"><input type="file" accept="image/*,video/*" capture id="ex2"/></div>
+          </details>
+          <details>
+            <summary>3. リビング</summary>
+            <div class="row"><input type="file" accept="image/*,video/*" capture id="ex3"/></div>
+          </details>
+          <details>
+            <summary>4. キッチン</summary>
+            <div class="row"><input type="file" accept="image/*,video/*" capture id="ex4"/></div>
+          </details>
+          <details>
+            <summary>5. 水回り</summary>
+            <div class="row"><input type="file" accept="image/*,video/*" capture id="ex5"/></div>
+          </details>
+          <details>
+            <summary>6. 電気/換気</summary>
+            <div class="row"><input type="file" accept="image/*,video/*" capture id="ex6"/></div>
+          </details>
+          <details>
+            <summary>7. 建付/結露</summary>
+            <div class="row"><input type="file" accept="image/*,video/*" capture id="ex7"/></div>
+          </details>
+          <details>
+            <summary>8. 総括</summary>
+            <div class="row"><textarea id="sum"></textarea></div>
+          </details>
+        </div>
+        <div class="card">
+          <h3>レポート</h3>
           <div class="row">
-            <div class="col">
-              <label>音声ファイル（FILE-MODE推奨）</label>
-              <input id="noiseFile" type="file" accept="audio/*" />
-              <div class="ft">
-                <button class="btn primary" id="btnNoisePlay">解析開始</button>
-                <button class="btn ghost" id="btnNoiseStop">停止</button>
-              </div>
-              <div class="help">HTTPS環境ならマイクも使用可（ブラウザ権限が必要）。</div>
-            </div>
-            <div class="col">
-              <label>感度 / 時間窓</label>
-              <input id="noiseGain" type="range" min="1" max="10" step="1" value="6" />
-              <input id="noiseFFT" type="range" min="512" max="4096" step="512" value="2048" />
-              <div class="help">感度=<span id="gainVal">6</span> / FFT=<span id="fftVal">2048</span></div>
-            </div>
+            <button class="btn" id="btnPrint">PDF/印刷</button>
+            <button class="btn" id="btnClear">クリア</button>
           </div>
-          <canvas id="specCanvas" aria-label="スペクトログラム"></canvas>
-          <div class="help">色=レベル。上が高周波。下=低周波。ホログラム重畳はv8.7で簡易（端末姿勢×レベル蓄積）。</div>
+          <div class="mini">印刷はブラウザのPDF出力を利用（端末内）。</div>
         </div>
       </div>
     </section>
 
-    <!-- ===== Inspect / 内見 ===== -->
-    <section id="sec-inspect" class="section">
-      <div class="card">
-        <div class="hd"><span class="ico"></span><b>内見チェック（ガイド & PDF）</b></div>
-        <div class="bd">
+    <!-- Finance/AVM -->
+    <section id="finance">
+      <div class="grid cols-2">
+        <div class="card">
+          <h3>AI査定（MVP）</h3>
           <div class="row">
-            <div class="col">
-              <label>カテゴリ</label>
-              <select id="inspCat">
-                <option>外観</option><option>玄関</option><option>リビング</option><option>キッチン</option>
-                <option>水回り</option><option>電気/換気</option><option>建付/結露</option><option>総括</option>
+            <div class="grow"><label class="mini">住所</label><input id="addr" placeholder="例: 静岡県藤枝市…"/></div>
+          </div>
+          <div class="row">
+            <div><label class="mini">土地(m²)</label><input type="number" id="land"/></div>
+            <div><label class="mini">延床(m²)</label><input type="number" id="floor"/></div>
+            <div><label class="mini">築年</label><input type="number" id="age"/></div>
+            <div><label class="mini">構造</label>
+              <select id="struct">
+                <option>木造</option><option>S造</option><option>RC</option>
               </select>
-              <label>状態</label>
-              <select id="inspState">
-                <option>良</option><option>注意</option><option>要修繕</option>
-              </select>
-              <label>概算単価（万円）</label>
-              <input id="inspUnit" type="number" step="0.1" value="0" />
-              <label>数量</label>
-              <input id="inspQty" type="number" step="1" value="1" />
-              <label>メモ</label>
-              <input id="inspMemo" type="text" placeholder="例）クロス剥がれ軽微、床鳴り少" />
-              <div class="ft">
-                <button class="btn ok" id="btnInspAdd">記録</button>
-                <button class="btn ghost" id="btnInspReset">クリア</button>
-              </div>
-            </div>
-            <div class="col">
-              <label>記録一覧</label>
-              <table class="table" id="inspTable">
-                <thead><tr><th>カテゴリ</th><th>状態</th><th>費用(万)</th><th>メモ</th><th></th></tr></thead>
-                <tbody></tbody>
-              </table>
-              <div class="ft">
-                <button class="btn primary" id="btnInspPDF">PDF/画像出力</button>
-                <span class="chip">合計: <b id="inspSum">0</b> 万円</span>
-              </div>
             </div>
           </div>
+          <div class="row">
+            <div><label class="mini">路線価(千円/m²)</label><input type="number" id="rosen"/></div>
+            <div><label class="mini">近傍成約 avg(万/m²)</label><input type="number" id="dealAvg"/></div>
+            <div class="grow"></div>
+            <button class="btn primary" id="btnAVM">査定</button>
+          </div>
+          <div id="avmOut"></div>
+        </div>
+        <div class="card">
+          <h3>DSCR</h3>
+          <div class="row">
+            <div><label class="mini">家賃(万/月)</label><input type="number" id="rent"/></div>
+            <div><label class="mini">空室率(%)</label><input type="number" id="vac" value="5"/></div>
+            <div><label class="mini">経費率(%)</label><input type="number" id="opex" value="20"/></div>
+          </div>
+          <div class="row">
+            <div><label class="mini">借入(万円)</label><input type="number" id="debt"/></div>
+            <div><label class="mini">金利(%)</label><input type="number" id="rate" value="2.0"/></div>
+            <div><label class="mini">年数</label><input type="number" id="years" value="25"/></div>
+            <div class="grow"></div>
+            <button class="btn" id="btnDSCR">計算</button>
+          </div>
+          <div id="dscrOut"></div>
         </div>
       </div>
     </section>
+  </main>
 
-    <!-- ===== Finance / DSCR ===== -->
-    <section id="sec-fin" class="section">
-      <div class="card">
-        <div class="hd"><span class="ico"></span><b>評価/資金（AI査定MVP + DSCR）</b></div>
-        <div class="bd">
-          <div class="row">
-            <div class="col">
-              <label>住所</label>
-              <input id="finAddr" type="text" placeholder="例）東京都〇〇区..." />
-              <div class="row">
-                <div class="col">
-                  <label>土地(m²)</label><input id="finLand" type="number" step="0.1" />
-                </div>
-                <div class="col">
-                  <label>延床(m²)</label><input id="finFloor" type="number" step="0.1" />
-                </div>
-              </div>
-              <div class="row">
-                <div class="col">
-                  <label>築年</label><input id="finAge" type="number" step="1" />
-                </div>
-                <div class="col">
-                  <label>構造</label>
-                  <select id="finStruct"><option>木造</option><option>S造</option><option>RC</option></select>
-                
+  <div class="dock">
+    <div class="row">
+      <div class="mini">HUD/保存はここから。サムネ・ドックは右のトグルで表示。</div>
+      <div class="row">
+        <button class="btn ghost" id="toggleDock">動画ドック</button>
+        <button class="btn" id="btnVideos">YouTube取得</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Tap HUD Canvas -->
+<canvas id="tapHud"></canvas>
+<div id="toast"></div>
+<div id="ytDock"><div class="rail" id="ytRail"></div></div>
+
+<script>
+const S = {
+  ver: 'v8.7-complete-07e',
+  state: { station:null, walkMax:10, landRatioMin:0.8, htmlItems:[], csv:[], samples:[], mab:{} },
+  storageKey: 're-app-87e',
+};
+
+/* ---------- Helpers ---------- */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+function toast(msg, ms=1800){ const t=$('#toast'); t.textContent=msg; t.style.display='block'; setTimeout(()=>t.style.display='none', ms); }
+function save(){ localStorage.setItem(S.storageKey, JSON.stringify(S.state)); toast('保存しました'); }
+function load(){ const s=localStorage.getItem(S.storageKey); if(s){ S.state=Object.assign(S.state, JSON.parse(s)); renderState(); toast('読込完了'); } }
+function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+/* ---------- Tabs ---------- */
+$('#tabs').addEventListener('click', e=>{ const t=e.target.closest('.tab'); if(!t) return; $$('.tab').forEach(x=>x.classList.remove('active')); t.classList.add('active'); $$('main>section').forEach(x=>x.classList.remove('active')); $('#'+t.dataset.tab).classList.add('active'); });
+
+$('#btnSave').onclick = save; $('#btnLoad').onclick = load;
+
+/* ---------- Tap-Diag HUD ---------- */
+let hudOn=false; const hud=$('#tapHud'); const hctx=hud.getContext('2d');
+function resizeHud(){ hud.width=innerWidth; hud.height=innerHeight; }
+resizeHud(); addEventListener('resize', resizeHud);
+function drawHud(){ hctx.clearRect(0,0,hud.width,hud.height); const els=[...document.querySelectorAll('*')].filter(el=>{
+  const st=getComputedStyle(el); if(st.display==='none' || st.visibility==='hidden') return false; const r=el.getBoundingClientRect();
+  return r.width>40&&r.height>28 && st.position!=='static' && st['z-index']!=='auto' && st.pointerEvents!=='none';
+}); els.forEach(el=>{ const r=el.getBoundingClientRect(); hctx.strokeStyle='rgba(239,68,68,.8)'; hctx.lineWidth=2; hctx.strokeRect(r.left,r.top,r.width,r.height); }); }
+$('#btnHud').onclick=()=>{ hudOn=!hudOn; hud.style.display=hudOn?'block':'none'; if(hudOn){ drawHud(); toast('HUD: オン'); } else toast('HUD: オフ'); };
+
+document.addEventListener('click', (e)=>{ if(!hudOn) return; drawHud(); });
+
+/* ---------- Chat ---------- */
+const chatlog=$('#chatlog'); function addBubble(t,who='ai'){ const b=document.createElement('div'); b.className='bubble '+who; b.textContent=t; chatlog.appendChild(b); chatlog.scrollTop=chatlog.scrollHeight; }
+function renderState(){ $('#state').textContent = JSON.stringify({station:S.state.station,walkMax:S.state.walkMax,landRatioMin:S.state.landRatioMin},null,2); }
+function applyCmd(cmd){ try{
+  if(/^駅=/.test(cmd)){ S.state.station = cmd.split('=')[1]; addBubble(`駅を「${S.state.station}」に設定しました。`,'ai'); }
+  else if(/^路≥/.test(cmd)){ S.state.landRatioMin = parseFloat(cmd.replace('路≥','')); addBubble(`土地値比率の下限を ${S.state.landRatioMin} に設定。`,'ai'); }
+  else if(/^徒歩≤/.test(cmd)){ S.state.walkMax = parseInt(cmd.replace('徒歩≤','')); addBubble(`徒歩上限を ${S.state.walkMax} 分に設定。`,'ai'); }
+  else if(/ランキング生成/.test(cmd)){ doRanking(); }
+  else { addBubble('コマンドが解釈できませんでした。例: 駅=藤枝, 路≥0.85, 徒歩≤10, ランキング生成','ai'); }
+  renderState();
+} catch(err){ addBubble('内部処理で例外が発生。状態は維持し、復帰手順を提示します: ①貼付→②プレビュー→③CSV反映→ランキング生成','ai'); console.error(err); }
+}
+$('#send').onclick=()=>{ const v=$('#chatInput').value.trim(); if(!v) return; addBubble(v,'me'); $('#chatInput').value=''; applyCmd(v); };
+$('#quick').addEventListener('click',(e)=>{ const b=e.target.closest('button[data-cmd]'); if(!b) return; addBubble(b.dataset.cmd,'me'); applyCmd(b.dataset.cmd); });
+addBubble('ようこそ。貼付→プレビュー→反映→ランキング生成の順で進められます。コマンド例: 「駅=藤枝」「路≥0.85」「徒歩≤10」','ai');
+renderState();
+
+/* ---------- Ranking: Extract from HTML ---------- */
+const prevBody = $('#prevTbl tbody'); const rankBody=$('#rankTbl tbody');
+$('#btnPreview').onclick=()=>{
+  const html=$('#htmlSrc').value; prevBody.innerHTML=''; let rows=[]; let hint='';
+  try{
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    const items=[...doc.querySelectorAll('a,article,li,div,section')];
+    for(const it of items){
+      const t=it.textContent.replace(/\s+/g,' ');
+      const addr=(t.match(/(都|道|府|県).+?市.+?(区|町|村|[0-9\-−丁目]+)/) || t.match(/[\u4e00-\u9faf].{4,20}(市|区|町|村).{0,20}/))?.[0];
+      const price=(t.match(/([0-9,.]+)\s*万/)||[])[1];
+      const land=(t.match(/(土地|敷地).*?([0-9,.]+)\s*m²/i)||t.match(/([0-9,.]+)\s*m²/))?.[2]||t.match(/([0-9,.]+)\s*m²/)?.[1];
+      if(addr && (price||land)) rows.push({address:addr, priceMan: price? parseFloat(price.replace(/,/g,'')) : null, landArea: land? parseFloat(land.replace(/,/g,'')) : null, url: it.closest('a')?.href || '#' });
+      if(rows.length>=30) break;
+    }
+    if(rows.length===0){
+      // Fallback regex over whole HTML
+      const re=/(静岡|東京|神奈川|埼玉|千葉|大阪|愛知)[^<]{0,60}(市|区|郡|町|村)[^<]{0,60}/g; let m; while((m=re.exec(html))){ const addr=m[0]; const p=(html.slice(m.index,m.index+180).match(/([0-9,.]+)\s*万/)||[])[1]; const a=(html.slice(m.index,m.index+320).match(/([0-9,.]+)\s*m²/)||[])[1]; if(addr&&(p||a)) rows.push({address:addr,priceMan:p?parseFloat(p.replace(/,/g,'')):null, landArea:a?parseFloat(a.replace(/,/g,'')):null, url:'#'}); if(rows.length>=20)break; }
+      hint='汎用正規表現で抽出しました。ドメイン固有ルールの追加を推奨。';
+    }
+  }catch(e){ console.error(e); hint='HTMLパースに失敗。貼付内容を確認してください。'; }
+  $('#extractHint').textContent = `抽出 ${rows.length} 件。${hint}`;
+  rows.forEach((r,i)=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${i+1}</td><td>${r.address||''}</td><td>${r.priceMan??''}</td><td>${r.landArea??''}</td>`; prevBody.appendChild(tr); });
+  S.state.samples = rows; $('#btnApply').disabled = rows.length===0; };
+
+$('#btnApply').onclick=()=>{ S.state.csv.push(...S.state.samples); S.state.samples=[]
